@@ -1,0 +1,76 @@
+export type AppTab = "scanner" | "bistro";
+
+export type Product = {
+  tytuł: string;
+  ean: string;
+  cena: number;
+};
+
+export type StockMap = Record<string, number>;
+export type InventoryCountsMap = Record<string, number>;
+export type InventoryVerifiedMap = Record<string, boolean>;
+
+export type BistroUnit = "g" | "kg" | "ml" | "l" | "szt";
+
+export type BistroPurchase = {
+  id: string;
+  date: string;
+  qty: number;
+  cost: number;
+  note: string;
+};
+
+export type BistroProduct = {
+  id: string;
+  name: string;
+  batchUnit: BistroUnit;
+  portionQty: number;
+  portionPrice: number;
+  soldQty: number;
+  purchases: BistroPurchase[];
+};
+
+export type SaveStatus = "idle" | "dirty" | "saving" | "saved" | "synced" | "offline";
+
+export type StockState = {
+  className: "unknown-stock" | "out-stock" | "low-stock" | "in-stock";
+  label: string;
+  shortLabel: string;
+  sortWeight: number;
+};
+
+export type InventoryEntry = {
+  ean: string;
+  qty: number;
+  verified: boolean;
+  product: Product;
+  baseline: number | null;
+  difference: number | null;
+  matches: boolean;
+  hasDifference: boolean;
+  stockKnown: boolean;
+};
+
+export type AppSnapshot = {
+  version: number;
+  exportedAt: string;
+  stockOverrides: StockMap;
+  inventoryCounts: InventoryCountsMap;
+  inventoryVerified: InventoryVerifiedMap;
+  bistroProducts: BistroProduct[];
+  bistroSelectedId: string | null;
+};
+
+export type RemoteSnapshot = {
+  stock?: {
+    overrides?: StockMap;
+  };
+  inventory?: {
+    counts?: InventoryCountsMap;
+    verified?: InventoryVerifiedMap;
+  };
+  bistro?: {
+    products?: BistroProduct[];
+  };
+  updatedAt?: number;
+};
