@@ -5,6 +5,7 @@ import type {
   InventoryEntry,
   InventoryVerifiedMap,
   Product,
+  PriceMap,
   StockMap,
   StockState
 } from "../types/app";
@@ -15,6 +16,13 @@ export function getResolvedStock(stockOverrides: StockMap): StockMap {
     ...BASE_STOCK,
     ...stockOverrides
   };
+}
+
+export function getResolvedProducts(priceOverrides: PriceMap): Product[] {
+  return LEGACY_PRODUCTS.map((product) => {
+    const override = priceOverrides[product.ean];
+    return Number.isFinite(override) && override > 0 ? { ...product, cena: override } : product;
+  });
 }
 
 export function getProductsByEan(products: Product[]): Map<string, Product> {

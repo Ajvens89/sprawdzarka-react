@@ -1,4 +1,4 @@
-import { LEGACY_PRODUCTS, filterProducts, getInventorySummary, getResolvedStock, getStockState } from "../../lib/scanner";
+import { LEGACY_PRODUCTS, filterProducts, getInventorySummary, getResolvedProducts, getResolvedStock, getStockState } from "../../lib/scanner";
 import { formatPrice, normalizeText } from "../../lib/utils";
 import { useAppStore } from "../../store/useAppStore";
 
@@ -10,6 +10,7 @@ export function ProductListPanel({
   const filter = useAppStore((state) => state.filter);
   const onlyInStock = useAppStore((state) => state.onlyInStock);
   const stockOverrides = useAppStore((state) => state.stockOverrides);
+  const priceOverrides = useAppStore((state) => state.priceOverrides);
   const inventoryCounts = useAppStore((state) => state.inventoryCounts);
   const inventoryVerified = useAppStore((state) => state.inventoryVerified);
   const productListView = useAppStore((state) => state.productListView);
@@ -18,8 +19,9 @@ export function ProductListPanel({
   const setProductListView = useAppStore((state) => state.setProductListView);
 
   const stock = getResolvedStock(stockOverrides);
-  const filteredProducts = filterProducts(LEGACY_PRODUCTS, filter, onlyInStock, stock);
-  const summary = getInventorySummary(LEGACY_PRODUCTS, stock, inventoryCounts, inventoryVerified);
+  const products = getResolvedProducts(priceOverrides);
+  const filteredProducts = filterProducts(products, filter, onlyInStock, stock);
+  const summary = getInventorySummary(products, stock, inventoryCounts, inventoryVerified);
 
   return (
     <section className="panel panel-products">

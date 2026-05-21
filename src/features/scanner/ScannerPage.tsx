@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { LEGACY_PRODUCTS, findProductByEan, getResolvedStock } from "../../lib/scanner";
+import { useEffect, useMemo, useState } from "react";
+import { LEGACY_PRODUCTS, getResolvedProducts, getResolvedStock } from "../../lib/scanner";
 import { normalizeEAN } from "../../lib/utils";
 import { useAppStore } from "../../store/useAppStore";
 import { InventoryPanel } from "./InventoryPanel";
@@ -13,10 +13,21 @@ type ResultState =
 
 export function ScannerPage(): JSX.Element {
   const stockOverrides = useAppStore((state) => state.stockOverrides);
+  const priceOverrides = useAppStore((state) => state.priceOverrides);
   const stock = useMemo(() => getResolvedStock(stockOverrides), [stockOverrides]);
+  const products = useMemo(() => getResolvedProducts(priceOverrides), [priceOverrides]);
 
   const [eanInput, setEanInput] = useState("");
   const [result, setResult] = useState<ResultState>({ type: "idle" });
+
+  useEffect(() => {
+    if (result.type !== "found") return;
+
+    const refreshedProduct = products.find((item) => item.ean === result.product.ean);
+    if (refreshedProduct && refreshedProduct.cena !== result.product.cena) {
+      setResult({ type: "found", product: refreshedProduct });
+    }
+  }, [products, result]);
 
   function checkEAN(value?: string): void {
     const query = normalizeEAN(value ?? eanInput);
@@ -39,7 +50,7 @@ export function ScannerPage(): JSX.Element {
       return;
     }
 
-    const product = findProductByEan(query);
+    const product = products.find((item) => item.ean === query);
 
     if (!product) {
       setResult({

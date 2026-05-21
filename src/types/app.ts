@@ -7,6 +7,17 @@ export type Product = {
 };
 
 export type StockMap = Record<string, number>;
+export type PriceMap = Record<string, number>;
+
+export type PriceEntry = {
+  marketPrice: string;
+  source: string;
+  checkedAt?: string;
+  status?: string;
+};
+
+export type PriceEntriesMap = Record<string, PriceEntry>;
+
 export type InventoryCountsMap = Record<string, number>;
 export type InventoryVerifiedMap = Record<string, boolean>;
 
@@ -55,6 +66,8 @@ export type AppSnapshot = {
   version: number;
   exportedAt: string;
   stockOverrides: StockMap;
+  priceOverrides: PriceMap;
+  priceEntries: PriceEntriesMap;
   inventoryCounts: InventoryCountsMap;
   inventoryVerified: InventoryVerifiedMap;
   bistroProducts: BistroProduct[];
@@ -64,6 +77,10 @@ export type AppSnapshot = {
 export type RemoteSnapshot = {
   stock?: {
     overrides?: StockMap;
+  };
+  prices?: {
+    overrides?: PriceMap;
+    entries?: PriceEntriesMap;
   };
   inventory?: {
     counts?: InventoryCountsMap;

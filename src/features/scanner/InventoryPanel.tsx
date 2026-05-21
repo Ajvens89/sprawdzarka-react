@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
 import { xlsxDownload } from "../../lib/export";
 import {
-  LEGACY_PRODUCTS,
   formatInventoryDifference,
   getInventoryEntries,
+  getResolvedProducts,
   getResolvedStock
 } from "../../lib/scanner";
 import { normalizeEAN } from "../../lib/utils";
@@ -15,6 +15,7 @@ export function InventoryPanel(): JSX.Element {
   const [isReportOpen, setIsReportOpen] = useState(false);
 
   const stockOverrides = useAppStore((state) => state.stockOverrides);
+  const priceOverrides = useAppStore((state) => state.priceOverrides);
   const inventoryCounts = useAppStore((state) => state.inventoryCounts);
   const inventoryVerified = useAppStore((state) => state.inventoryVerified);
   const inventoryOnlyDifferences = useAppStore((state) => state.inventoryOnlyDifferences);
@@ -26,9 +27,10 @@ export function InventoryPanel(): JSX.Element {
   const resetInventory = useAppStore((state) => state.resetInventory);
 
   const stock = getResolvedStock(stockOverrides);
+  const products = useMemo(() => getResolvedProducts(priceOverrides), [priceOverrides]);
   const entries = useMemo(
-    () => getInventoryEntries(LEGACY_PRODUCTS, stock, inventoryCounts, inventoryVerified, inventoryOnlyDifferences),
-    [inventoryCounts, inventoryOnlyDifferences, inventoryVerified, stock]
+    () => getInventoryEntries(products, stock, inventoryCounts, inventoryVerified, inventoryOnlyDifferences),
+    [inventoryCounts, inventoryOnlyDifferences, inventoryVerified, products, stock]
   );
 
   function handleScan(): void {
@@ -38,7 +40,7 @@ export function InventoryPanel(): JSX.Element {
       return;
     }
 
-    const product = LEGACY_PRODUCTS.find((item) => item.ean === ean);
+    const product = products.find((item) => item.ean === ean);
     if (!product) {
       setStatus({ type: "error", message: `Kod ${ean} nie istnieje w bazie produktów.` });
       setScanInput("");
@@ -62,7 +64,7 @@ export function InventoryPanel(): JSX.Element {
       return;
     }
 
-    const product = LEGACY_PRODUCTS.find((item) => item.ean === ean);
+    const product = products.find((item) => item.ean === ean);
     if (!product) {
       setStatus({ type: "error", message: `Kod ${ean} nie istnieje w bazie produktów.` });
       return;

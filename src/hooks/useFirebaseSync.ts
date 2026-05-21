@@ -6,6 +6,8 @@ import type { RemoteSnapshot } from "../types/app";
 
 export function useFirebaseSync(isAuthenticated: boolean): void {
   const stockOverrides = useAppStore((state) => state.stockOverrides);
+  const priceOverrides = useAppStore((state) => state.priceOverrides);
+  const priceEntries = useAppStore((state) => state.priceEntries);
   const inventoryCounts = useAppStore((state) => state.inventoryCounts);
   const inventoryVerified = useAppStore((state) => state.inventoryVerified);
   const bistroProducts = useAppStore((state) => state.bistroProducts);
@@ -15,11 +17,12 @@ export function useFirebaseSync(isAuthenticated: boolean): void {
   const snapshot = useMemo<RemoteSnapshot>(
     () => ({
       stock: { overrides: stockOverrides },
+      prices: { overrides: priceOverrides, entries: priceEntries },
       inventory: { counts: inventoryCounts, verified: inventoryVerified },
       bistro: { products: bistroProducts },
       updatedAt: Date.now()
     }),
-    [bistroProducts, inventoryCounts, inventoryVerified, stockOverrides]
+    [bistroProducts, inventoryCounts, inventoryVerified, priceEntries, priceOverrides, stockOverrides]
   );
 
   const isHydratingRef = useRef(false);

@@ -6,6 +6,9 @@ import type {
   BistroProduct,
   InventoryCountsMap,
   InventoryVerifiedMap,
+  PriceEntriesMap,
+  PriceEntry,
+  PriceMap,
   RemoteSnapshot,
   SaveStatus,
   StockMap
@@ -25,6 +28,8 @@ type AppState = SyncMeta & {
   inventoryOnlyDifferences: boolean;
   productListView: "compact" | "full";
   stockOverrides: StockMap;
+  priceOverrides: PriceMap;
+  priceEntries: PriceEntriesMap;
   inventoryCounts: InventoryCountsMap;
   inventoryVerified: InventoryVerifiedMap;
   bistroProducts: BistroProduct[];
@@ -43,6 +48,9 @@ type AppState = SyncMeta & {
 
   setStockOverride: (ean: string, qty: number) => void;
   replaceStockOverrides: (overrides: StockMap) => void;
+  approvePriceOverrides: (overrides: PriceMap) => void;
+  setPriceEntry: (ean: string, entry: PriceEntry) => void;
+  replacePriceEntries: (entries: PriceEntriesMap) => void;
 
   selectBistroProduct: (id: string | null) => void;
   addBistroProduct: (name: string) => void;
@@ -76,6 +84,41 @@ function sanitizeInventoryCounts(value: unknown): InventoryCountsMap {
     Object.entries(value as Record<string, unknown>)
       .map(([ean, qty]) => [ean.replace(/\D/g, "").slice(0, 13), clampFloor(Number(qty))] as const)
       .filter(([ean]) => /^\d{13}$/.test(ean))
+  );
+}
+
+function sanitizePriceOverrides(value: unknown): PriceMap {
+  if (!value || typeof value !== "object") return {};
+
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>)
+      .map(([ean, price]) => [ean.replace(/\D/g, "").slice(0, 13), Math.round(safeNumber(price, 0) * 100) / 100] as const)
+      .filter(([ean, price]) => /^\d{13}$/.test(ean) && price > 0)
+  );
+}
+
+function sanitizePriceEntries(value: unknown): PriceEntriesMap {
+  if (!value || typeof value !== "object") return {};
+
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>)
+      .map(([ean, entry]) => {
+        const normalizedEan = ean.replace(/\D/g, "").slice(0, 13);
+        const item = entry as Partial<PriceEntry> | null;
+
+        return [
+          normalizedEan,
+          {
+            marketPrice: String(item?.marketPrice ?? ""),
+            source: String(item?.source ?? ""),
+            checkedAt: item?.checkedAt ? String(item.checkedAt) : undefined,
+            status: item?.status ? String(item.status) : undefined
+          }
+        ] as const;
+      })
+      .filter(([ean, entry]) => {
+        return /^\d{13}$/.test(ean) && Boolean(entry.marketPrice || entry.source || entry.checkedAt || entry.status);
+      })
   );
 }
 
@@ -140,6 +183,8 @@ export const useAppStore = create<AppState>()(
       inventoryOnlyDifferences: false,
       productListView: "compact",
       stockOverrides: {},
+      priceOverrides: {},
+      priceEntries: {},
       inventoryCounts: {},
       inventoryVerified: {},
       bistroProducts: BISTRO_DEFAULTS.map((product) => ({ ...product, purchases: [...product.purchases] })),
@@ -209,6 +254,35 @@ export const useAppStore = create<AppState>()(
 
       replaceStockOverrides: (overrides) => {
         set({ stockOverrides: overrides });
+        get().markDirty();
+      },
+
+      approvePriceOverrides: (overrides) => {
+        set((state) => ({
+          priceOverrides: {
+            ...state.priceOverrides,
+            ...sanitizePriceOverrides(overrides)
+          }
+        }));
+        get().markDirty();
+      },
+
+      setPriceEntry: (ean, entry) => {
+        const sanitized = sanitizePriceEntries({ [ean]: entry });
+        const nextEntry = sanitized[ean];
+        if (!nextEntry) return;
+
+        set((state) => ({
+          priceEntries: {
+            ...state.priceEntries,
+            [ean]: nextEntry
+          }
+        }));
+        get().markDirty();
+      },
+
+      replacePriceEntries: (entries) => {
+        set({ priceEntries: sanitizePriceEntries(entries) });
         get().markDirty();
       },
 
@@ -321,6 +395,8 @@ export const useAppStore = create<AppState>()(
 
         set({
           stockOverrides: { ...(snapshot.stock?.overrides ?? {}) },
+          priceOverrides: sanitizePriceOverrides(snapshot.prices?.overrides),
+          priceEntries: sanitizePriceEntries(snapshot.prices?.entries),
           inventoryCounts,
           inventoryVerified,
           bistroProducts,
@@ -338,6 +414,8 @@ export const useAppStore = create<AppState>()(
 
         set({
           stockOverrides: { ...(snapshot.stockOverrides ?? {}) },
+          priceOverrides: sanitizePriceOverrides(snapshot.priceOverrides),
+          priceEntries: sanitizePriceEntries(snapshot.priceEntries),
           inventoryCounts,
           inventoryVerified,
           bistroProducts,
@@ -350,6 +428,8 @@ export const useAppStore = create<AppState>()(
         version: 1,
         exportedAt: new Date().toISOString(),
         stockOverrides: get().stockOverrides,
+        priceOverrides: get().priceOverrides,
+        priceEntries: get().priceEntries,
         inventoryCounts: get().inventoryCounts,
         inventoryVerified: get().inventoryVerified,
         bistroProducts: get().bistroProducts,
@@ -364,6 +444,8 @@ export const useAppStore = create<AppState>()(
         inventoryOnlyDifferences: state.inventoryOnlyDifferences,
         productListView: state.productListView,
         stockOverrides: state.stockOverrides,
+        priceOverrides: state.priceOverrides,
+        priceEntries: state.priceEntries,
         inventoryCounts: state.inventoryCounts,
         inventoryVerified: state.inventoryVerified,
         bistroProducts: state.bistroProducts,

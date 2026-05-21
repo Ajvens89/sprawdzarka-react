@@ -5,6 +5,7 @@ import { useAppStore } from "../../store/useAppStore";
 import type { AppSnapshot } from "../../types/app";
 import { useAuth } from "../auth/AuthProvider";
 import { BistroPage } from "../bistro/BistroPage";
+import { PriceAdvisorPage } from "../prices/PriceAdvisorPage";
 import { ScannerPage } from "../scanner/ScannerPage";
 
 export function AppShell(): JSX.Element {
@@ -39,6 +40,13 @@ export function AppShell(): JSX.Element {
               className={({ isActive }) => `tab-btn${isActive ? " active" : ""}`}
             >
               Bistro
+            </NavLink>
+
+            <NavLink
+              to="/prices"
+              className={({ isActive }) => `tab-btn${isActive ? " active" : ""}`}
+            >
+              Ceny
             </NavLink>
 
             <NavLink
@@ -118,6 +126,7 @@ export function AppShell(): JSX.Element {
         <Route path="/" element={<Navigate to="/scanner" replace />} />
         <Route path="/scanner" element={<ScannerPage />} />
         <Route path="/bistro" element={<BistroPage />} />
+        <Route path="/prices" element={<PriceAdvisorPage />} />
       </Routes>
     </div>
   );
