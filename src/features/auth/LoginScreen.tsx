@@ -2,47 +2,109 @@ import { useState } from "react";
 import { useAuth } from "./AuthProvider";
 
 const ERRORS: Record<string, string> = {
-  "auth/invalid-email": "Nieprawidłowy format e-maila.",
-  "auth/user-not-found": "Nie znaleziono użytkownika.",
-  "auth/wrong-password": "Błędne hasło.",
-  "auth/invalid-credential": "Błędny e-mail lub hasło.",
-  "auth/too-many-requests": "Za dużo prób. Spróbuj za chwilę.",
-  "auth/network-request-failed": "Brak połączenia z internetem."
+  "auth/invalid-email": "Nieprawidlowy format e-maila.",
+  "auth/user-not-found": "Nie znaleziono uzytkownika.",
+  "auth/user-disabled": "To konto jest zablokowane w Firebase.",
+  "auth/wrong-password": "Bledne haslo.",
+  "auth/invalid-credential": "Bledny e-mail lub haslo.",
+  "auth/operation-not-allowed": "Logowanie e-mail/haslo jest wylaczone w Firebase.",
+  "auth/invalid-api-key": "Klucz API Firebase jest nieprawidlowy.",
+  "auth/app-not-authorized": "Ta domena aplikacji nie jest dopuszczona w konfiguracji Firebase.",
+  "auth/too-many-requests": "Za duzo prob. Sprobuj za chwile.",
+  "auth/network-request-failed": "Brak polaczenia z internetem."
 };
 
-export function LoginScreen(): JSX.Element {
-  const { signIn } = useAuth();
+function getAuthErrorMessage(err: unknown, fallback: string): string {
+  const code = typeof err === "object" && err && "code" in err ? String((err as { code: string }).code) : "";
+  const message = typeof err === "object" && err && "message" in err ? String((err as { message: string }).message) : "";
+
+  if (code in ERRORS) return `${ERRORS[code]} (${code})`;
+  if (code.includes("requests-from-referer") || message.includes("requests-from-referer")) {
+    return "Klucz API Firebase blokuje te domene. Dodaj sprawdzarkazf.web.app w ograniczeniach klucza API. (auth/requests-from-referer-blocked)";
+  }
+  if (code) return `${fallback} (${code})`;
+  return fallback;
+}
+
+export function LoginScreen({
+  onSuccess,
+  onClose
+}: {
+  onSuccess?: () => void;
+  onClose?: () => void;
+} = {}): JSX.Element {
+  const { resetPassword, signIn } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
 
   async function handleSubmit(): Promise<void> {
     if (!email.trim() || !password) {
-      setError("Wpisz e-mail i hasło.");
+      setError("Wpisz e-mail i haslo.");
+      setNotice("");
       return;
     }
 
     try {
       setIsSubmitting(true);
       setError("");
+      setNotice("");
       await signIn(email.trim(), password);
+      onSuccess?.();
     } catch (err) {
-      const code = typeof err === "object" && err && "code" in err ? String((err as { code: string }).code) : "";
-      setError(ERRORS[code] || "Nie udało się zalogować.");
+      setError(getAuthErrorMessage(err, "Nie udalo sie zalogowac."));
     } finally {
       setIsSubmitting(false);
     }
   }
 
+  async function handlePasswordReset(): Promise<void> {
+    if (!email.trim()) {
+      setError("Wpisz e-mail, a wyslemy link do zmiany hasla.");
+      setNotice("");
+      return;
+    }
+
+    try {
+      setIsResetting(true);
+      setError("");
+      setNotice("");
+      await resetPassword(email.trim());
+      setNotice("Wyslano link do zmiany hasla. Sprawdz skrzynke e-mail.");
+    } catch (err) {
+      setError(getAuthErrorMessage(err, "Nie udalo sie wyslac linku resetujacego haslo."));
+    } finally {
+      setIsResetting(false);
+    }
+  }
+
   return (
-    <div className="login-overlay" style={{ display: "flex" }}>
+    <div
+      className="login-overlay"
+      style={{ display: "flex" }}
+      onClick={(event) => {
+        if (event.target === event.currentTarget) onClose?.();
+      }}
+    >
       <div className="login-panel">
-        <div className="login-badge">Panel dostępu</div>
+        {onClose ? (
+          <button
+            type="button"
+            className="login-link-btn"
+            style={{ position: "absolute", top: "1rem", right: "1rem", margin: 0 }}
+            onClick={onClose}
+          >
+            Zamknij
+          </button>
+        ) : null}
+        <div className="login-badge">Panel dostepu</div>
         <h2 className="login-title">
-          Zaloguj się do <span>Sprawdzarki</span>
+          Zaloguj sie do <span>Sprawdzarki</span>
         </h2>
-        <p className="login-subtitle">Firebase Auth · dostęp do danych wydarzenia</p>
+        <p className="login-subtitle">Firebase Auth - dostep do danych wydarzenia</p>
 
         <div className="login-fields">
           <div className="login-field">
@@ -56,23 +118,23 @@ export function LoginScreen(): JSX.Element {
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               onKeyDown={(event) => {
-                if (event.key === "Enter") handleSubmit();
+                if (event.key === "Enter") void handleSubmit();
               }}
             />
           </div>
 
           <div className="login-field">
-            <label className="login-label" htmlFor="loginPassword">Hasło</label>
+            <label className="login-label" htmlFor="loginPassword">Haslo</label>
             <input
               id="loginPassword"
               className="login-input"
               type="password"
               autoComplete="current-password"
-              placeholder="••••••••"
+              placeholder="********"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               onKeyDown={(event) => {
-                if (event.key === "Enter") handleSubmit();
+                if (event.key === "Enter") void handleSubmit();
               }}
             />
           </div>
@@ -86,13 +148,30 @@ export function LoginScreen(): JSX.Element {
           {error}
         </div>
 
+        <div
+          className="login-notice"
+          style={{ display: notice ? "block" : "none" }}
+          role="status"
+        >
+          {notice}
+        </div>
+
         <button
           className="login-btn"
           type="button"
-          onClick={handleSubmit}
-          disabled={isSubmitting}
+          onClick={() => void handleSubmit()}
+          disabled={isSubmitting || isResetting}
         >
-          {isSubmitting ? "Logowanie…" : "Zaloguj się"}
+          {isSubmitting ? "Logowanie..." : "Zaloguj sie"}
+        </button>
+
+        <button
+          className="login-link-btn"
+          type="button"
+          onClick={() => void handlePasswordReset()}
+          disabled={isSubmitting || isResetting}
+        >
+          {isResetting ? "Wysylam link..." : "Nie pamietasz hasla?"}
         </button>
       </div>
     </div>

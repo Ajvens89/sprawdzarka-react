@@ -1,5 +1,6 @@
 import {
   onAuthStateChanged,
+  sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signOut,
   type User
@@ -12,6 +13,7 @@ type AuthContextValue = {
   isLoading: boolean;
   user: User | null;
   signIn: (email: string, password: string) => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
   logout: () => Promise<void>;
 };
 
@@ -40,6 +42,10 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
     signIn: async (email, password) => {
       if (!auth) return;
       await signInWithEmailAndPassword(auth, email, password);
+    },
+    resetPassword: async (email) => {
+      if (!auth) return;
+      await sendPasswordResetEmail(auth, email);
     },
     logout: async () => {
       if (!auth) return;

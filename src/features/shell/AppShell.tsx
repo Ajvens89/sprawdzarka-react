@@ -1,15 +1,18 @@
+import { useState } from "react";
 import { NavLink, Route, Routes, Navigate } from "react-router-dom";
 import { EVENT_DATE, EVENT_NAME } from "../../data/meta";
 import { downloadJson, readJsonFile } from "../../lib/utils";
 import { useAppStore } from "../../store/useAppStore";
 import type { AppSnapshot } from "../../types/app";
 import { useAuth } from "../auth/AuthProvider";
+import { LoginScreen } from "../auth/LoginScreen";
 import { BistroPage } from "../bistro/BistroPage";
 import { PriceAdvisorPage } from "../prices/PriceAdvisorPage";
 import { ScannerPage } from "../scanner/ScannerPage";
 
 export function AppShell(): JSX.Element {
-  const { isFirebaseEnabled, logout } = useAuth();
+  const { isFirebaseEnabled, logout, user } = useAuth();
+  const [showLogin, setShowLogin] = useState(false);
 
   const saveStatus = useAppStore((state) => state.saveStatus);
   const saveLabel = useAppStore((state) => state.saveLabel);
@@ -97,13 +100,38 @@ export function AppShell(): JSX.Element {
             />
           </label>
 
-          {isFirebaseEnabled ? (
-            <button className="tab-btn tab-btn--logout" onClick={() => void logout()}>
+          {isFirebaseEnabled && user ? (
+            <button className="tab-btn tab-btn--logout" type="button" onClick={() => void logout()}>
               Wyloguj
+            </button>
+          ) : null}
+
+          {isFirebaseEnabled && !user ? (
+            <button className="tab-btn" type="button" onClick={() => setShowLogin(true)}>
+              Zaloguj
             </button>
           ) : null}
         </div>
       </div>
+
+      {isFirebaseEnabled && !user ? (
+        <div className="banner banner-warning" style={{ marginBottom: "1rem" }}>
+          <strong>Tryb lokalny</strong> — dane zapisują się tylko w tej przeglądarce. Kliknij{" "}
+          <button
+            type="button"
+            className="btn-ghost gsb-btn"
+            style={{ display: "inline-flex", marginLeft: ".35rem" }}
+            onClick={() => setShowLogin(true)}
+          >
+            Zaloguj
+          </button>
+          , aby synchronizować dane przez Firebase.
+        </div>
+      ) : null}
+
+      {showLogin && !user ? (
+        <LoginScreen onSuccess={() => setShowLogin(false)} onClose={() => setShowLogin(false)} />
+      ) : null}
 
       {!isFirebaseEnabled ? (
         <div className="banner banner-warning" style={{ marginBottom: "1rem" }}>

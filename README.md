@@ -19,11 +19,41 @@ npm run dev
 
 ## Firebase
 
-1. Skopiuj `.env.example` do `.env`
+1. Skopiuj `.env.example` do `.env` (lub `.env.local`)
 2. Uzupełnij wartości `VITE_FIREBASE_*`
 3. Uruchom aplikację ponownie
 
 Jeśli `.env` nie jest skonfigurowane, aplikacja działa lokalnie bez logowania.
+
+### Wdrożenie na Firebase Hosting
+
+Projekt: `sprawdzarkazf` · adres: https://sprawdzarkazf.web.app
+
+```bash
+npm install
+npm run build          # wymaga .env z kluczami VITE_FIREBASE_*
+firebase login
+firebase deploy        # hosting + cloud function /api/price-check
+```
+
+Sekrety dla sprawdzania cen (Cloud Functions):
+
+```bash
+firebase functions:secrets:set SERPAPI_KEY
+firebase functions:secrets:set ALLEGRO_ACCESS_TOKEN   # opcjonalnie
+npm run deploy:functions
+```
+
+### Logowanie nie działa?
+
+W [Google Cloud Console](https://console.cloud.google.com/apis/credentials) otwórz klucz API Firebase
+i w **Ograniczenia aplikacji → Witryny HTTP** dodaj:
+
+- `sprawdzarkazf.web.app`
+- `sprawdzarkazf.firebaseapp.com`
+- `localhost` (do developmentu)
+
+Bez tego pojawia się błąd `auth/requests-from-referer-blocked`.
 
 ## Co jest już przeniesione
 

@@ -127,6 +127,16 @@ export function PriceAdvisorPage(): JSX.Element {
         currentPrice: String(product.cena)
       });
       const response = await fetch(`/api/price-check?${params.toString()}`);
+      const contentType = response.headers.get("content-type") ?? "";
+
+      if (!contentType.includes("application/json")) {
+        updateEntry(product.ean, {
+          checkedAt: new Date().toLocaleString("pl-PL"),
+          status: "Serwer cen nie jest wdrozony na Firebase. Uruchom: npm run deploy"
+        });
+        return;
+      }
+
       const result = (await response.json()) as PriceCheckResponse;
 
       updateEntry(product.ean, {

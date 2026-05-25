@@ -1,6 +1,5 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { AuthProvider, useAuth } from "./features/auth/AuthProvider";
-import { LoginScreen } from "./features/auth/LoginScreen";
 import { OrdersDisplayPage } from "./features/orders/OrdersDisplayPage";
 import { OrdersPage } from "./features/orders/OrdersPage";
 import { AppShell } from "./features/shell/AppShell";
@@ -17,7 +16,7 @@ function AppSyncEffects(): null {
 }
 
 function AppContent(): JSX.Element {
-  const { isFirebaseEnabled, isLoading, user } = useAuth();
+  const { isLoading } = useAuth();
 
   if (isLoading) {
     return (
@@ -29,10 +28,6 @@ function AppContent(): JSX.Element {
         </div>
       </div>
     );
-  }
-
-  if (isFirebaseEnabled && !user) {
-    return <LoginScreen />;
   }
 
   return (
