@@ -39,8 +39,14 @@ firebase deploy        # hosting + cloud function /api/price-check
 Sekrety dla sprawdzania cen (Cloud Functions):
 
 ```bash
+# PowerShell — wklej klucz z https://serpapi.com/manage-api-key
+.\scripts\set-serpapi-secret.ps1 -ApiKey "TWOJ_KLUCZ_SERPAPI"
+```
+
+Alternatywnie ręcznie:
+
+```bash
 firebase functions:secrets:set SERPAPI_KEY
-firebase functions:secrets:set ALLEGRO_ACCESS_TOKEN   # opcjonalnie
 npm run deploy:functions
 ```
 
