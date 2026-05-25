@@ -399,8 +399,8 @@ export function PriceAdvisorPage(): JSX.Element {
       </section>
 
       <section className="panel price-advisor-list">
-        {rows.map(({ product, entry, stockQty, marketPrice, priceTarget, suggestedPrice, difference, status }) => (
-          <article className={`price-row ${status}`} key={product.ean}>
+        {rows.map(({ product, entry, stockQty, marketPrice, priceTarget, suggestedPrice, difference, status }, index) => (
+          <article className={`price-row ${status}`} key={`${product.ean}-${index}`}>
             <div className="price-row-main">
               <div className="price-row-title">{productTitle(product)}</div>
               <div className="price-row-meta">
