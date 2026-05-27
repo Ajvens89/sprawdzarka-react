@@ -8,6 +8,9 @@ export function useLocalSaveFeedback(): void {
   const inventoryCounts = useAppStore((state) => state.inventoryCounts);
   const inventoryVerified = useAppStore((state) => state.inventoryVerified);
   const bistroProducts = useAppStore((state) => state.bistroProducts);
+  const purchaseCosts = useAppStore((state) => state.purchaseCosts);
+  const priceOverrides = useAppStore((state) => state.priceOverrides);
+  const priceEntries = useAppStore((state) => state.priceEntries);
 
   const signature = useMemo(
     () =>
@@ -15,9 +18,12 @@ export function useLocalSaveFeedback(): void {
         stockOverrides,
         inventoryCounts,
         inventoryVerified,
-        bistroProducts
+        bistroProducts,
+        purchaseCosts,
+        priceOverrides,
+        priceEntries
       }),
-    [stockOverrides, inventoryCounts, inventoryVerified, bistroProducts]
+    [stockOverrides, inventoryCounts, inventoryVerified, bistroProducts, purchaseCosts, priceOverrides, priceEntries]
   );
 
   useEffect(() => {

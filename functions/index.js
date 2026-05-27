@@ -2,6 +2,52 @@ import { onRequest } from "firebase-functions/v2/https";
 
 const MIN_TRUSTED_RATIO = 0.68;
 const MAX_TRUSTED_RATIO = 1.8;
+const ALLOWED_ORIGINS = [
+  "https://sprawdzarkazf.web.app",
+  "https://sprawdzarkazf.firebaseapp.com",
+  "http://localhost",
+  "http://localhost:5173"
+];
+const RATE_LIMIT = 30;
+const RATE_WINDOW_MS = 60_000;
+const rateBuckets = new Map();
+
+function getClientIp(req) {
+  const forwarded = req.headers["x-forwarded-for"];
+  return String(Array.isArray(forwarded) ? forwarded[0] : forwarded ?? req.ip ?? "unknown")
+    .split(",")[0]
+    .trim();
+}
+
+function isAllowedOrigin(req) {
+  const origin = String(req.headers.origin ?? "");
+  const referer = String(req.headers.referer ?? "");
+  const source = origin || referer;
+  if (!source) return false;
+  return ALLOWED_ORIGINS.some((allowed) => source.startsWith(allowed));
+}
+
+function resolveCorsOrigin(req) {
+  const origin = String(req.headers.origin ?? "");
+  if (ALLOWED_ORIGINS.some((allowed) => origin.startsWith(allowed))) {
+    return origin;
+  }
+  return ALLOWED_ORIGINS[0];
+}
+
+function checkRateLimit(ip) {
+  const now = Date.now();
+  const bucket = rateBuckets.get(ip) ?? { count: 0, resetAt: now + RATE_WINDOW_MS };
+
+  if (now > bucket.resetAt) {
+    bucket.count = 0;
+    bucket.resetAt = now + RATE_WINDOW_MS;
+  }
+
+  bucket.count += 1;
+  rateBuckets.set(ip, bucket);
+  return bucket.count <= RATE_LIMIT;
+}
 
 function extractPrices(html) {
   const normalizedHtml = html
@@ -241,12 +287,34 @@ export const priceCheck = onRequest(
     secrets: ["SERPAPI_KEY"]
   },
   async (req, res) => {
-  res.setHeader("Access-Control-Allow-Origin", "*");
+  const corsOrigin = resolveCorsOrigin(req);
+  res.setHeader("Access-Control-Allow-Origin", corsOrigin);
+  res.setHeader("Vary", "Origin");
   res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
   if (req.method === "OPTIONS") {
     res.status(204).send("");
+    return;
+  }
+
+  if (!isAllowedOrigin(req)) {
+    res.status(403).json({
+      ok: false,
+      price: null,
+      source: "",
+      message: "Zablokowane źródło żądania."
+    });
+    return;
+  }
+
+  if (!checkRateLimit(getClientIp(req))) {
+    res.status(429).json({
+      ok: false,
+      price: null,
+      source: "",
+      message: "Za dużo zapytań. Spróbuj za chwilę."
+    });
     return;
   }
 

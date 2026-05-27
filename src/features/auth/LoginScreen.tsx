@@ -2,16 +2,16 @@ import { useState } from "react";
 import { useAuth } from "./AuthProvider";
 
 const ERRORS: Record<string, string> = {
-  "auth/invalid-email": "Nieprawidlowy format e-maila.",
-  "auth/user-not-found": "Nie znaleziono uzytkownika.",
+  "auth/invalid-email": "Nieprawidłowy format e-maila.",
+  "auth/user-not-found": "Nie znaleziono użytkownika.",
   "auth/user-disabled": "To konto jest zablokowane w Firebase.",
-  "auth/wrong-password": "Bledne haslo.",
-  "auth/invalid-credential": "Bledny e-mail lub haslo.",
-  "auth/operation-not-allowed": "Logowanie e-mail/haslo jest wylaczone w Firebase.",
-  "auth/invalid-api-key": "Klucz API Firebase jest nieprawidlowy.",
+  "auth/wrong-password": "Błędne hasło.",
+  "auth/invalid-credential": "Błędny e-mail lub hasło.",
+  "auth/operation-not-allowed": "Logowanie e-mail/hasło jest wyłączone w Firebase.",
+  "auth/invalid-api-key": "Klucz API Firebase jest nieprawidłowy.",
   "auth/app-not-authorized": "Ta domena aplikacji nie jest dopuszczona w konfiguracji Firebase.",
-  "auth/too-many-requests": "Za duzo prob. Sprobuj za chwile.",
-  "auth/network-request-failed": "Brak polaczenia z internetem."
+  "auth/too-many-requests": "Za dużo prób. Spróbuj za chwilę.",
+  "auth/network-request-failed": "Brak połączenia z internetem."
 };
 
 function getAuthErrorMessage(err: unknown, fallback: string): string {
@@ -20,7 +20,7 @@ function getAuthErrorMessage(err: unknown, fallback: string): string {
 
   if (code in ERRORS) return `${ERRORS[code]} (${code})`;
   if (code.includes("requests-from-referer") || message.includes("requests-from-referer")) {
-    return "Klucz API Firebase blokuje te domene. Dodaj sprawdzarkazf.web.app w ograniczeniach klucza API. (auth/requests-from-referer-blocked)";
+    return "Klucz API Firebase blokuje tę domenę. Dodaj sprawdzarkazf.web.app w ograniczeniach klucza API. (auth/requests-from-referer-blocked)";
   }
   if (code) return `${fallback} (${code})`;
   return fallback;
@@ -43,7 +43,7 @@ export function LoginScreen({
 
   async function handleSubmit(): Promise<void> {
     if (!email.trim() || !password) {
-      setError("Wpisz e-mail i haslo.");
+      setError("Wpisz e-mail i hasło.");
       setNotice("");
       return;
     }
@@ -55,7 +55,7 @@ export function LoginScreen({
       await signIn(email.trim(), password);
       onSuccess?.();
     } catch (err) {
-      setError(getAuthErrorMessage(err, "Nie udalo sie zalogowac."));
+      setError(getAuthErrorMessage(err, "Nie udało się zalogować."));
     } finally {
       setIsSubmitting(false);
     }
@@ -63,7 +63,7 @@ export function LoginScreen({
 
   async function handlePasswordReset(): Promise<void> {
     if (!email.trim()) {
-      setError("Wpisz e-mail, a wyslemy link do zmiany hasla.");
+      setError("Wpisz e-mail, a wyślemy link do zmiany hasła.");
       setNotice("");
       return;
     }
@@ -73,9 +73,9 @@ export function LoginScreen({
       setError("");
       setNotice("");
       await resetPassword(email.trim());
-      setNotice("Wyslano link do zmiany hasla. Sprawdz skrzynke e-mail.");
+      setNotice("Wysłano link do zmiany hasła. Sprawdź skrzynkę e-mail.");
     } catch (err) {
-      setError(getAuthErrorMessage(err, "Nie udalo sie wyslac linku resetujacego haslo."));
+      setError(getAuthErrorMessage(err, "Nie udało się wysłać linku resetującego hasło."));
     } finally {
       setIsResetting(false);
     }
@@ -100,11 +100,11 @@ export function LoginScreen({
             Zamknij
           </button>
         ) : null}
-        <div className="login-badge">Panel dostepu</div>
+        <div className="login-badge">Panel dostępu</div>
         <h2 className="login-title">
-          Zaloguj sie do <span>Sprawdzarki</span>
+          Zaloguj się do <span>Sprawdzarki</span>
         </h2>
-        <p className="login-subtitle">Firebase Auth - dostep do danych wydarzenia</p>
+        <p className="login-subtitle">Firebase Auth — dostęp do danych wydarzenia</p>
 
         <div className="login-fields">
           <div className="login-field">
@@ -124,7 +124,7 @@ export function LoginScreen({
           </div>
 
           <div className="login-field">
-            <label className="login-label" htmlFor="loginPassword">Haslo</label>
+            <label className="login-label" htmlFor="loginPassword">Hasło</label>
             <input
               id="loginPassword"
               className="login-input"
@@ -162,7 +162,7 @@ export function LoginScreen({
           onClick={() => void handleSubmit()}
           disabled={isSubmitting || isResetting}
         >
-          {isSubmitting ? "Logowanie..." : "Zaloguj sie"}
+          {isSubmitting ? "Logowanie..." : "Zaloguj się"}
         </button>
 
         <button
@@ -171,7 +171,7 @@ export function LoginScreen({
           onClick={() => void handlePasswordReset()}
           disabled={isSubmitting || isResetting}
         >
-          {isResetting ? "Wysylam link..." : "Nie pamietasz hasla?"}
+          {isResetting ? "Wysyłam link..." : "Nie pamiętasz hasła?"}
         </button>
       </div>
     </div>

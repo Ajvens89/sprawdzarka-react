@@ -19,6 +19,14 @@ export function BistroSidebar(): JSX.Element {
     setNewName("");
   }
 
+  function handleReset(): void {
+    const confirmed = window.confirm(
+      "Wyzerować sprzedaż i zakupy we wszystkich produktach?\n\nLista produktów (także dodane ręcznie) zostanie bez zmian."
+    );
+    if (!confirmed) return;
+    resetBistro();
+  }
+
   function handleExport(): void {
     const rows: Array<Array<string | number>> = [
       ["Produkt", "Jednostka", "Porcja", "Cena porcji", "Sprzedano", "Przychód", "Zysk"]
@@ -98,10 +106,14 @@ export function BistroSidebar(): JSX.Element {
 
       <div className="bistro-toolbar" style={{ marginTop: ".75rem" }}>
         <button className="btn-ghost" type="button" onClick={handleExport}>Eksport XLSX</button>
-        <button className="btn-ghost btn-ghost--danger" type="button" onClick={resetBistro}>Reset bistro</button>
+        <button className="btn-ghost btn-ghost--danger" type="button" onClick={handleReset}>
+          Reset sprzedaży
+        </button>
       </div>
 
-      <p className="hint" style={{ marginTop: ".6rem" }}>Stan jest zapisywany lokalnie, a po podłączeniu Firebase również synchronizowany.</p>
+      <p className="hint" style={{ marginTop: ".6rem" }}>
+        Dodane produkty zostają na liście. Reset zeruje tylko sprzedaż i zakupy. Po zalogowaniu dane synchronizują się z Firebase.
+      </p>
     </section>
   );
 }

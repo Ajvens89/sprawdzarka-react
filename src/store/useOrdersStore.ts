@@ -3,15 +3,20 @@ import { v4 as uuid } from "uuid";
 import { Order, OrderItem, OrderStatus } from "../features/orders/orders.types";
 import { formatOrderNumber } from "../features/orders/orders.utils";
 import {
+  allocateOrderNumber,
   markOrderDone,
   releaseOrderDoneSyncClaim,
   saveOrder,
   tryClaimOrderDoneSync,
   updateOrderStatus as updateOrderStatusRemote
 } from "../lib/orders.firebase";
-import { syncOrderToBistro } from "../lib/ordersToBistro";
+import { rollbackBistroSync, syncOrderToBistro } from "../lib/ordersToBistro";
 
 interface CartItem extends OrderItem {}
+
+export type SubmitOrderResult =
+  | { ok: true }
+  | { ok: false; error: string };
 
 interface OrdersState {
   cartItems: CartItem[];
@@ -19,6 +24,7 @@ interface OrdersState {
   orders: Order[];
   nextOrderNumber: number;
   processingDoneIds: string[];
+  lastSubmitError: string | null;
 
   addToCart: (product: {
     id: string;
@@ -31,8 +37,9 @@ interface OrdersState {
   removeCartItem: (id: string) => void;
   setCartNote: (note: string) => void;
   clearCart: () => void;
+  clearSubmitError: () => void;
 
-  submitOrder: (createdBy?: string) => Promise<void>;
+  submitOrder: (createdBy?: string) => Promise<SubmitOrderResult>;
   setOrders: (orders: Order[]) => void;
   updateOrderStatus: (id: string, status: OrderStatus) => Promise<void>;
 }
@@ -51,6 +58,7 @@ export const useOrdersStore = create<OrdersState>((set, get) => ({
   orders: [],
   nextOrderNumber: 1,
   processingDoneIds: [],
+  lastSubmitError: null,
 
   addToCart(product) {
     set((state) => {
@@ -60,12 +68,14 @@ export const useOrdersStore = create<OrdersState>((set, get) => ({
         return {
           cartItems: state.cartItems.map((item) =>
             item.id === product.id ? { ...item, qty: item.qty + 1 } : item
-          )
+          ),
+          lastSubmitError: null
         };
       }
 
       return {
-        cartItems: [...state.cartItems, { ...product, qty: 1 }]
+        cartItems: [...state.cartItems, { ...product, qty: 1 }],
+        lastSubmitError: null
       };
     });
   },
@@ -100,30 +110,52 @@ export const useOrdersStore = create<OrdersState>((set, get) => ({
     set({ cartItems: [], cartNote: "" });
   },
 
+  clearSubmitError() {
+    set({ lastSubmitError: null });
+  },
+
   async submitOrder(createdBy = "kasa") {
-    const { cartItems, cartNote, nextOrderNumber, clearCart } = get();
-    if (cartItems.length === 0) return;
+    const { cartItems, cartNote } = get();
+    if (cartItems.length === 0) {
+      return { ok: false, error: "Koszyk jest pusty." };
+    }
 
     const total = cartItems.reduce((sum, item) => sum + item.qty * item.unitPrice, 0);
 
-    const order: Order = {
-      id: uuid(),
-      number: formatOrderNumber(nextOrderNumber),
-      createdAt: Date.now(),
-      createdBy,
-      status: "new",
-      note: cartNote.trim(),
-      items: cartItems,
-      total,
-      syncedToBistro: false
-    };
+    try {
+      const orderNumber = await allocateOrderNumber();
 
-    set((state) => ({
-      nextOrderNumber: state.nextOrderNumber + 1
-    }));
+      const order: Order = {
+        id: uuid(),
+        number: formatOrderNumber(orderNumber),
+        createdAt: Date.now(),
+        createdBy,
+        status: "new",
+        note: cartNote.trim(),
+        items: cartItems,
+        total,
+        syncedToBistro: false
+      };
 
-    clearCart();
-    await saveOrder(order);
+      await saveOrder(order);
+
+      set((state) => ({
+        nextOrderNumber: Math.max(state.nextOrderNumber, orderNumber + 1),
+        cartItems: [],
+        cartNote: "",
+        lastSubmitError: null
+      }));
+
+      return { ok: true };
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Nie udało się wysłać zamówienia. Sprawdź połączenie z Firebase.";
+
+      set({ lastSubmitError: message });
+      return { ok: false, error: message };
+    }
   },
 
   setOrders(orders) {
@@ -133,7 +165,7 @@ export const useOrdersStore = create<OrdersState>((set, get) => ({
 
     set({
       orders,
-      nextOrderNumber: Math.max(1, maxNumber + 1)
+      nextOrderNumber: Math.max(get().nextOrderNumber, maxNumber + 1)
     });
   },
 
@@ -165,6 +197,8 @@ export const useOrdersStore = create<OrdersState>((set, get) => ({
       processingDoneIds: [...current.processingDoneIds, id]
     }));
 
+    let rollback: Record<string, number> | undefined;
+
     try {
       const claim = await tryClaimOrderDoneSync(id, DEVICE_WORKER_ID);
 
@@ -186,6 +220,8 @@ export const useOrdersStore = create<OrdersState>((set, get) => ({
         return;
       }
 
+      rollback = syncResult.rollback;
+
       await markOrderDone(id);
 
       set((current) => ({
@@ -202,6 +238,10 @@ export const useOrdersStore = create<OrdersState>((set, get) => ({
       }));
     } catch (error) {
       console.error(`[orders] Błąd podczas finalizacji zamówienia ${id}`, error);
+
+      if (rollback && Object.keys(rollback).length > 0) {
+        rollbackBistroSync(rollback);
+      }
 
       try {
         await releaseOrderDoneSyncClaim(id);

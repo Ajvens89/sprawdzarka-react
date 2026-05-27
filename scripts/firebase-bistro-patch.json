@@ -1,0 +1,13 @@
+{
+  "bistro": {
+    "products": [
+      {"batchUnit": "g", "id": "b1", "name": "Popcorn słony", "portionPrice": 7, "portionQty": 100, "soldQty": 2},
+      {"batchUnit": "g", "id": "b4", "name": "Frytki duże", "portionPrice": 14, "portionQty": 300, "soldQty": 0},
+      {"batchUnit": "szt", "id": "b7", "name": "Napój (0,5 l)", "portionPrice": 5, "portionQty": 1, "soldQty": 0},
+      {"batchUnit": "szt", "id": "b11", "name": "Wata cukrowa", "portionPrice": 8, "portionQty": 1, "soldQty": 1},
+      {"batchUnit": "szt", "id": "b12", "name": "Zakręcony ziemniak", "portionPrice": 12, "portionQty": 1, "soldQty": 0},
+      {"batchUnit": "szt", "id": "b13", "name": "Bubble tea", "portionPrice": 16, "portionQty": 1, "soldQty": 0}
+    ]
+  },
+  "updatedAt": 1779750000000
+}

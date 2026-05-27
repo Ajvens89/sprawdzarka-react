@@ -8,6 +8,8 @@ export type Product = {
 
 export type StockMap = Record<string, number>;
 export type PriceMap = Record<string, number>;
+export type CostMap = Record<string, number>;
+export type VatMap = Record<string, number>;
 
 export type PriceEntry = {
   marketPrice: string;
@@ -67,6 +69,8 @@ export type AppSnapshot = {
   exportedAt: string;
   stockOverrides: StockMap;
   priceOverrides: PriceMap;
+  purchaseCosts: CostMap;
+  purchaseVatRates: VatMap;
   priceEntries: PriceEntriesMap;
   inventoryCounts: InventoryCountsMap;
   inventoryVerified: InventoryVerifiedMap;
@@ -81,6 +85,10 @@ export type RemoteSnapshot = {
   prices?: {
     overrides?: PriceMap;
     entries?: PriceEntriesMap;
+  };
+  costs?: {
+    purchase?: CostMap;
+    vat?: VatMap;
   };
   inventory?: {
     counts?: InventoryCountsMap;

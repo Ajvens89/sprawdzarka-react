@@ -1,5 +1,4 @@
 import { BistroDetail } from "./BistroDetail";
-import { InvoiceImportPanel } from "./InvoiceImportPanel";
 import { BistroSidebar } from "./BistroSidebar";
 import { BistroSummary } from "./BistroSummary";
 
@@ -12,8 +11,6 @@ export function BistroPage(): JSX.Element {
         <BistroSidebar />
         <BistroDetail />
       </div>
-
-      <InvoiceImportPanel />
     </>
   );
 }

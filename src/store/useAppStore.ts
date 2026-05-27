@@ -1,7 +1,9 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { BISTRO_DEFAULTS } from "../data/bistroDefaults";
+import { BISTRO_DEFAULTS, REMOVED_BISTRO_PRODUCT_IDS } from "../data/bistroDefaults";
 import type {
+  CostMap,
+  VatMap,
   AppSnapshot,
   BistroProduct,
   InventoryCountsMap,
@@ -20,6 +22,7 @@ type SyncMeta = {
   saveLabel: string;
   connectionLabel: string;
   unsavedChanges: number;
+  localDataVersion: number;
 };
 
 type AppState = SyncMeta & {
@@ -29,6 +32,8 @@ type AppState = SyncMeta & {
   productListView: "compact" | "full";
   stockOverrides: StockMap;
   priceOverrides: PriceMap;
+  purchaseCosts: CostMap;
+  purchaseVatRates: VatMap;
   priceEntries: PriceEntriesMap;
   inventoryCounts: InventoryCountsMap;
   inventoryVerified: InventoryVerifiedMap;
@@ -51,6 +56,8 @@ type AppState = SyncMeta & {
   approvePriceOverrides: (overrides: PriceMap) => void;
   setPriceEntry: (ean: string, entry: PriceEntry) => void;
   replacePriceEntries: (entries: PriceEntriesMap) => void;
+  setPurchaseCost: (ean: string, cost: number | null) => void;
+  replacePurchaseCosts: (costs: CostMap, vatRates?: VatMap) => void;
 
   selectBistroProduct: (id: string | null) => void;
   addBistroProduct: (name: string) => void;
@@ -62,6 +69,7 @@ type AppState = SyncMeta & {
 
   markDirty: () => void;
   setSyncStatus: (status: SaveStatus, connectionLabel?: string) => void;
+  acknowledgeSync: (updatedAt: number) => void;
   hydrateRemoteSnapshot: (snapshot: RemoteSnapshot) => void;
   importSnapshot: (snapshot: AppSnapshot) => void;
   exportSnapshot: () => AppSnapshot;
@@ -94,6 +102,31 @@ function sanitizePriceOverrides(value: unknown): PriceMap {
     Object.entries(value as Record<string, unknown>)
       .map(([ean, price]) => [ean.replace(/\D/g, "").slice(0, 13), Math.round(safeNumber(price, 0) * 100) / 100] as const)
       .filter(([ean, price]) => /^\d{13}$/.test(ean) && price > 0)
+  );
+}
+
+function sanitizePurchaseCosts(value: unknown): CostMap {
+  if (!value || typeof value !== "object") return {};
+
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>)
+      .map(([ean, cost]) => [ean.replace(/\D/g, "").slice(0, 13), Math.round(safeNumber(cost, 0) * 100) / 100] as const)
+      .filter(([ean, cost]) => /^\d{13}$/.test(ean) && cost >= 0)
+  );
+}
+
+function sanitizePurchaseVatRates(value: unknown): VatMap {
+  if (!value || typeof value !== "object") return {};
+
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>)
+      .map(([ean, vat]) => {
+        const normalizedEan = ean.replace(/\D/g, "").slice(0, 13);
+        const numeric = safeNumber(vat, -1);
+        const percent = numeric > 0 && numeric <= 1 ? numeric * 100 : numeric;
+        return [normalizedEan, Math.round(percent * 100) / 100] as const;
+      })
+      .filter(([ean, vat]) => /^\d{13}$/.test(ean) && vat >= 0 && vat <= 100)
   );
 }
 
@@ -141,37 +174,63 @@ function sanitizeInventoryVerified(value: unknown, counts: InventoryCountsMap): 
   return Object.fromEntries([...verified].map((ean) => [ean, true]));
 }
 
+function cloneBistroProduct(product: BistroProduct): BistroProduct {
+  return { ...product, purchases: [...product.purchases] };
+}
+
+function mergeBistroProducts(remoteProducts: BistroProduct[]): BistroProduct[] {
+  const defaults = BISTRO_DEFAULTS.map(cloneBistroProduct);
+  const defaultIds = new Set(defaults.map((product) => product.id));
+  const remoteById = new Map(remoteProducts.map((product) => [product.id, product]));
+
+  const mergedDefaults = defaults.map((product) => remoteById.get(product.id) ?? product);
+  const customProducts = remoteProducts.filter(
+    (product) => !defaultIds.has(product.id) && !REMOVED_BISTRO_PRODUCT_IDS.has(product.id)
+  );
+
+  return [...mergedDefaults, ...customProducts.map(cloneBistroProduct)];
+}
+
 function sanitizeBistroProducts(value: unknown): BistroProduct[] {
   if (!Array.isArray(value) || value.length === 0) {
-    return BISTRO_DEFAULTS.map((product) => ({ ...product, purchases: [...product.purchases] }));
+    return BISTRO_DEFAULTS.map(cloneBistroProduct);
   }
 
-  return value.map((item, index) => ({
-    id: String((item as BistroProduct).id ?? `b${index + 1}`),
-    name: String((item as BistroProduct).name ?? "Produkt"),
-    batchUnit: (["g", "kg", "ml", "l", "szt"].includes(String((item as BistroProduct).batchUnit))
-      ? (item as BistroProduct).batchUnit
-      : "szt") as BistroProduct["batchUnit"],
-    portionQty: Math.max(0.001, safeNumber((item as BistroProduct).portionQty, 1)),
-    portionPrice: Math.max(0, safeNumber((item as BistroProduct).portionPrice, 0)),
-    soldQty: Math.max(0, clampFloor(safeNumber((item as BistroProduct).soldQty, 0))),
-    purchases: Array.isArray((item as BistroProduct).purchases)
-      ? (item as BistroProduct).purchases.map((purchase) => ({
-          id: String(purchase.id ?? uid("purchase")),
-          date: String(purchase.date ?? todayStr()),
-          qty: Math.max(0, safeNumber(purchase.qty, 0)),
-          cost: Math.max(0, safeNumber(purchase.cost, 0)),
-          note: String(purchase.note ?? "")
-        }))
-      : []
-  }));
+  const parsed = value
+    .filter((item) => !REMOVED_BISTRO_PRODUCT_IDS.has(String((item as BistroProduct).id ?? "")))
+    .map((item, index) => ({
+      id: String((item as BistroProduct).id ?? `b${index + 1}`),
+      name: String((item as BistroProduct).name ?? "Produkt"),
+      batchUnit: (["g", "kg", "ml", "l", "szt"].includes(String((item as BistroProduct).batchUnit))
+        ? (item as BistroProduct).batchUnit
+        : "szt") as BistroProduct["batchUnit"],
+      portionQty: Math.max(0.001, safeNumber((item as BistroProduct).portionQty, 1)),
+      portionPrice: Math.max(0, safeNumber((item as BistroProduct).portionPrice, 0)),
+      soldQty: Math.max(0, clampFloor(safeNumber((item as BistroProduct).soldQty, 0))),
+      purchases: Array.isArray((item as BistroProduct).purchases)
+        ? (item as BistroProduct).purchases.map((purchase) => ({
+            id: String(purchase.id ?? uid("purchase")),
+            date: String(purchase.date ?? todayStr()),
+            qty: Math.max(0, safeNumber(purchase.qty, 0)),
+            cost: Math.max(0, safeNumber(purchase.cost, 0)),
+            note: String(purchase.note ?? "")
+          }))
+        : []
+    }));
+
+  if (parsed.length === 0) {
+    return BISTRO_DEFAULTS.map(cloneBistroProduct);
+  }
+
+  return mergeBistroProducts(parsed);
 }
 
 const initialSyncMeta: SyncMeta = {
   saveStatus: "idle",
   saveLabel: "—",
   connectionLabel: "",
-  unsavedChanges: 0
+  unsavedChanges: 0,
+  localDataVersion: 0
 };
 
 export const useAppStore = create<AppState>()(
@@ -184,6 +243,8 @@ export const useAppStore = create<AppState>()(
       productListView: "compact",
       stockOverrides: {},
       priceOverrides: {},
+      purchaseCosts: {},
+      purchaseVatRates: {},
       priceEntries: {},
       inventoryCounts: {},
       inventoryVerified: {},
@@ -286,6 +347,30 @@ export const useAppStore = create<AppState>()(
         get().markDirty();
       },
 
+      setPurchaseCost: (ean, cost) => {
+        const normalizedEan = ean.replace(/\D/g, "").slice(0, 13);
+        if (!/^\d{13}$/.test(normalizedEan)) return;
+
+        set((state) => {
+          const nextCosts = { ...state.purchaseCosts };
+          if (cost === null || !Number.isFinite(cost) || cost < 0) {
+            delete nextCosts[normalizedEan];
+          } else {
+            nextCosts[normalizedEan] = Math.round(cost * 100) / 100;
+          }
+          return { purchaseCosts: nextCosts };
+        });
+        get().markDirty();
+      },
+
+      replacePurchaseCosts: (costs, vatRates) => {
+        set({
+          purchaseCosts: sanitizePurchaseCosts(costs),
+          purchaseVatRates: sanitizePurchaseVatRates(vatRates ?? {})
+        });
+        get().markDirty();
+      },
+
       selectBistroProduct: (id) => set({ bistroSelectedId: id }),
 
       addBistroProduct: (name) => {
@@ -328,10 +413,14 @@ export const useAppStore = create<AppState>()(
       },
 
       resetBistro: () => {
-        set({
-          bistroProducts: BISTRO_DEFAULTS.map((product) => ({ ...product, purchases: [...product.purchases] })),
-          bistroSelectedId: BISTRO_DEFAULTS[0]?.id ?? null
-        });
+        set((state) => ({
+          bistroProducts: state.bistroProducts.map((product) => ({
+            ...product,
+            soldQty: 0,
+            purchases: []
+          })),
+          bistroSelectedId: state.bistroSelectedId ?? state.bistroProducts[0]?.id ?? null
+        }));
         get().markDirty();
       },
 
@@ -374,17 +463,28 @@ export const useAppStore = create<AppState>()(
         set({
           saveStatus: "dirty",
           unsavedChanges,
-          saveLabel: statusLabel("dirty", unsavedChanges)
+          saveLabel: statusLabel("dirty", unsavedChanges),
+          localDataVersion: Date.now()
         });
       },
 
       setSyncStatus: (status, connectionLabel = get().connectionLabel) => {
-        const unsavedChanges = status === "synced" || status === "saved" ? 0 : get().unsavedChanges;
+        const unsavedChanges =
+          status === "synced" || status === "saved" || status === "saving" ? 0 : get().unsavedChanges;
         set({
           saveStatus: status,
           saveLabel: statusLabel(status, unsavedChanges),
           connectionLabel,
           unsavedChanges
+        });
+      },
+
+      acknowledgeSync: (updatedAt) => {
+        set({
+          localDataVersion: updatedAt,
+          saveStatus: "synced",
+          saveLabel: statusLabel("synced", 0),
+          unsavedChanges: 0
         });
       },
 
@@ -396,11 +496,14 @@ export const useAppStore = create<AppState>()(
         set({
           stockOverrides: { ...(snapshot.stock?.overrides ?? {}) },
           priceOverrides: sanitizePriceOverrides(snapshot.prices?.overrides),
+          purchaseCosts: sanitizePurchaseCosts(snapshot.costs?.purchase),
+          purchaseVatRates: sanitizePurchaseVatRates(snapshot.costs?.vat),
           priceEntries: sanitizePriceEntries(snapshot.prices?.entries),
           inventoryCounts,
           inventoryVerified,
           bistroProducts,
           bistroSelectedId: bistroProducts[0]?.id ?? null,
+          localDataVersion: snapshot.updatedAt ?? Date.now(),
           saveStatus: "synced",
           saveLabel: statusLabel("synced", 0),
           unsavedChanges: 0
@@ -415,6 +518,8 @@ export const useAppStore = create<AppState>()(
         set({
           stockOverrides: { ...(snapshot.stockOverrides ?? {}) },
           priceOverrides: sanitizePriceOverrides(snapshot.priceOverrides),
+          purchaseCosts: sanitizePurchaseCosts(snapshot.purchaseCosts ?? {}),
+          purchaseVatRates: sanitizePurchaseVatRates(snapshot.purchaseVatRates ?? {}),
           priceEntries: sanitizePriceEntries(snapshot.priceEntries),
           inventoryCounts,
           inventoryVerified,
@@ -429,6 +534,8 @@ export const useAppStore = create<AppState>()(
         exportedAt: new Date().toISOString(),
         stockOverrides: get().stockOverrides,
         priceOverrides: get().priceOverrides,
+        purchaseCosts: get().purchaseCosts,
+        purchaseVatRates: get().purchaseVatRates,
         priceEntries: get().priceEntries,
         inventoryCounts: get().inventoryCounts,
         inventoryVerified: get().inventoryVerified,
@@ -445,12 +552,32 @@ export const useAppStore = create<AppState>()(
         productListView: state.productListView,
         stockOverrides: state.stockOverrides,
         priceOverrides: state.priceOverrides,
+        purchaseCosts: state.purchaseCosts,
+        purchaseVatRates: state.purchaseVatRates,
         priceEntries: state.priceEntries,
         inventoryCounts: state.inventoryCounts,
         inventoryVerified: state.inventoryVerified,
         bistroProducts: state.bistroProducts,
-        bistroSelectedId: state.bistroSelectedId
-      })
+        bistroSelectedId: state.bistroSelectedId,
+        localDataVersion: state.localDataVersion
+      }),
+      onRehydrateStorage: () => (state) => {
+        if (!state) return;
+
+        const hasLocalData =
+          Object.keys(state.priceEntries).length > 0 ||
+          Object.keys(state.purchaseCosts).length > 0 ||
+          Object.keys(state.purchaseVatRates).length > 0 ||
+          Object.keys(state.stockOverrides).length > 0 ||
+          Object.keys(state.inventoryCounts).length > 0 ||
+          state.bistroProducts.some(
+            (product) => product.soldQty > 0 || product.purchases.length > 0
+          );
+
+        if (hasLocalData && state.localDataVersion <= 0) {
+          state.localDataVersion = Date.now();
+        }
+      }
     }
   )
 );

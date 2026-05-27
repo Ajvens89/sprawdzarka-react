@@ -1,7 +1,5 @@
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Route, Routes } from "react-router-dom";
 import { AuthProvider, useAuth } from "./features/auth/AuthProvider";
-import { OrdersDisplayPage } from "./features/orders/OrdersDisplayPage";
-import { OrdersPage } from "./features/orders/OrdersPage";
 import { AppShell } from "./features/shell/AppShell";
 import { useFirebaseSync } from "./hooks/useFirebaseSync";
 import { useLocalSaveFeedback } from "./hooks/useLocalSaveFeedback";
@@ -35,9 +33,6 @@ function AppContent(): JSX.Element {
       <AppSyncEffects />
 
       <Routes>
-        <Route path="/orders" element={<OrdersPage />} />
-        <Route path="/orders-display" element={<OrdersDisplayPage />} />
-        <Route path="/" element={<Navigate to="/scanner" replace />} />
         <Route path="*" element={<AppShell />} />
       </Routes>
     </>

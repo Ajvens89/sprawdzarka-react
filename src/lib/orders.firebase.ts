@@ -11,6 +11,8 @@ import { database } from "./firebase";
 import { Order, OrderStatus } from "../features/orders/orders.types";
 
 const ORDERS_PATH = "orders_live";
+const ORDER_NUMBER_PATH = `${ORDERS_PATH}/_meta/nextNumber`;
+const SYNC_LOCK_TTL_MS = 5 * 60 * 1000;
 
 type OrderSyncLock = {
   workerId: string;
@@ -20,6 +22,10 @@ type OrderSyncLock = {
 type OrderRecord = Order & {
   bistroSyncLock?: OrderSyncLock | null;
 };
+
+export function isOrdersFirebaseReady(): boolean {
+  return Boolean(database);
+}
 
 function getDatabaseOrThrow() {
   if (!database) {
@@ -39,22 +45,50 @@ export function orderRef(id: string): DatabaseReference {
   return ref(db, `${ORDERS_PATH}/${id}`);
 }
 
+function isOrderRecord(value: unknown): value is Order {
+  return Boolean(value && typeof value === "object" && "id" in value && "createdAt" in value);
+}
+
 export function subscribeOrders(callback: (orders: Order[]) => void): () => void {
+  if (!database) {
+    callback([]);
+    return () => undefined;
+  }
+
   const r = ordersRef();
 
   onValue(r, (snap) => {
     const val = snap.val();
-    if (!val) {
+    if (!val || typeof val !== "object") {
       callback([]);
       return;
     }
 
-    const orders = Object.values(val) as Order[];
+    const orders = Object.entries(val as Record<string, unknown>)
+      .filter(([key, value]) => key !== "_meta" && isOrderRecord(value))
+      .map(([, value]) => value as Order);
+
     orders.sort((a, b) => a.createdAt - b.createdAt);
     callback(orders);
   });
 
   return () => off(r);
+}
+
+export async function allocateOrderNumber(): Promise<number> {
+  const db = getDatabaseOrThrow();
+  const counterRef = ref(db, ORDER_NUMBER_PATH);
+
+  const result = await runTransaction(counterRef, (current) => {
+    const next = typeof current === "number" && Number.isFinite(current) ? current + 1 : 1;
+    return next;
+  });
+
+  if (!result.committed || typeof result.snapshot.val() !== "number") {
+    throw new Error("Nie udało się nadać numeru zamówienia.");
+  }
+
+  return result.snapshot.val() as number;
 }
 
 export async function saveOrder(order: Order): Promise<void> {
@@ -84,7 +118,10 @@ export async function tryClaimOrderDoneSync(
       }
 
       if (current.bistroSyncLock) {
-        return;
+        const lockAge = Date.now() - current.bistroSyncLock.claimedAt;
+        if (lockAge < SYNC_LOCK_TTL_MS && current.bistroSyncLock.workerId !== workerId) {
+          return;
+        }
       }
 
       return {

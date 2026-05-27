@@ -7,6 +7,15 @@ export interface BistroSyncResult {
   updatedIds: string[];
   missingIds: string[];
   skipReason?: string;
+  rollback?: Record<string, number>;
+}
+
+export function rollbackBistroSync(rollback: Record<string, number>): void {
+  const { updateBistroProduct } = useAppStore.getState();
+
+  for (const [bistroId, soldQty] of Object.entries(rollback)) {
+    updateBistroProduct(bistroId, "soldQty", soldQty);
+  }
 }
 
 export function syncOrderToBistro(order: Order): BistroSyncResult {
@@ -68,20 +77,22 @@ export function syncOrderToBistro(order: Order): BistroSyncResult {
     };
   }
 
+  const rollback: Record<string, number> = {};
   const updatedIds: string[] = [];
 
   for (const [bistroId, delta] of deltaMap) {
     const bistroProduct = bistroProducts.find((product) => product.id === bistroId);
     if (!bistroProduct) continue;
 
-    const newSoldQty = bistroProduct.soldQty + delta;
-    updateBistroProduct(bistroId, "soldQty", newSoldQty);
+    rollback[bistroId] = bistroProduct.soldQty;
+    updateBistroProduct(bistroId, "soldQty", bistroProduct.soldQty + delta);
     updatedIds.push(bistroId);
   }
 
   return {
     synced: true,
     updatedIds,
-    missingIds: []
+    missingIds: [],
+    rollback
   };
 }

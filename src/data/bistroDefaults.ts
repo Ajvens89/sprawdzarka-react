@@ -1,5 +1,16 @@
 import type { BistroProduct } from '../types/app';
 
+/** Produkty wycofane z menu — filtrowane przy wczytywaniu starych danych. */
+export const REMOVED_BISTRO_PRODUCT_IDS = new Set([
+  'b2',
+  'b3',
+  'b5',
+  'b6',
+  'b8',
+  'b9',
+  'b10'
+]);
+
 export const BISTRO_DEFAULTS: BistroProduct[] = [
   {
     "id": "b1",
@@ -11,46 +22,10 @@ export const BISTRO_DEFAULTS: BistroProduct[] = [
     "purchases": []
   },
   {
-    "id": "b2",
-    "name": "Popcorn słodki",
-    "batchUnit": "g",
-    "portionQty": 100,
-    "portionPrice": 7.0,
-    "soldQty": 0,
-    "purchases": []
-  },
-  {
-    "id": "b3",
-    "name": "Frytki małe",
-    "batchUnit": "g",
-    "portionQty": 150,
-    "portionPrice": 9.0,
-    "soldQty": 0,
-    "purchases": []
-  },
-  {
     "id": "b4",
     "name": "Frytki duże",
     "batchUnit": "g",
     "portionQty": 300,
-    "portionPrice": 14.0,
-    "soldQty": 0,
-    "purchases": []
-  },
-  {
-    "id": "b5",
-    "name": "Hot dog",
-    "batchUnit": "szt",
-    "portionQty": 1,
-    "portionPrice": 12.0,
-    "soldQty": 0,
-    "purchases": []
-  },
-  {
-    "id": "b6",
-    "name": "Zapiekanka",
-    "batchUnit": "szt",
-    "portionQty": 1,
     "portionPrice": 14.0,
     "soldQty": 0,
     "purchases": []
@@ -65,41 +40,32 @@ export const BISTRO_DEFAULTS: BistroProduct[] = [
     "purchases": []
   },
   {
-    "id": "b8",
-    "name": "Kawa",
-    "batchUnit": "g",
-    "portionQty": 8,
-    "portionPrice": 6.0,
-    "soldQty": 0,
-    "purchases": []
-  },
-  {
-    "id": "b9",
-    "name": "Herbata",
+    "id": "b11",
+    "name": "Wata cukrowa",
     "batchUnit": "szt",
     "portionQty": 1,
-    "portionPrice": 4.0,
+    "portionPrice": 8.0,
     "soldQty": 0,
     "purchases": []
   },
   {
-    "id": "b10",
-    "name": "Woda (0,5 l)",
+    "id": "b12",
+    "name": "Zakręcony ziemniak",
     "batchUnit": "szt",
     "portionQty": 1,
-    "portionPrice": 3.0,
+    "portionPrice": 12.0,
     "soldQty": 0,
     "purchases": []
   },
   {
-  "id": "b11",
-  "name": "Wata cukrowa",
-  "batchUnit": "szt",
-  "portionQty": 1,
-  "portionPrice": 8.0,
-  "soldQty": 0,
-  "purchases": []
-}
+    "id": "b13",
+    "name": "Bubble tea",
+    "batchUnit": "szt",
+    "portionQty": 1,
+    "portionPrice": 16.0,
+    "soldQty": 0,
+    "purchases": []
+  }
 ];
 
 export const BISTRO_UNITS = ['g', 'kg', 'ml', 'l', 'szt'] as const;

@@ -34,10 +34,6 @@ function loadEntries(): Record<string, PriceEntry> {
   }
 }
 
-function saveEntries(entries: Record<string, PriceEntry>): void {
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
-}
-
 function cleanEntries(entries: Record<string, PriceEntry>): Record<string, PriceEntry> {
   return Object.fromEntries(
     Object.entries(entries).filter(([, entry]) => entry.marketPrice || entry.source || entry.checkedAt || entry.status)
@@ -83,11 +79,10 @@ export function PriceAdvisorPage(): JSX.Element {
   const [maxAboveMarket, setMaxAboveMarket] = useState(5);
   const [belowMarket, setBelowMarket] = useState(0);
   const [verifying, setVerifying] = useState<Record<string, boolean>>({});
-  const onlyInStock = useAppStore((state) => state.onlyInStock);
+  const [onlyInStock, setOnlyInStock] = useState(false);
   const stockOverrides = useAppStore((state) => state.stockOverrides);
   const priceOverrides = useAppStore((state) => state.priceOverrides);
   const entries = useAppStore((state) => state.priceEntries);
-  const toggleOnlyInStock = useAppStore((state) => state.toggleOnlyInStock);
   const approvePriceOverrides = useAppStore((state) => state.approvePriceOverrides);
   const setPriceEntry = useAppStore((state) => state.setPriceEntry);
   const replacePriceEntries = useAppStore((state) => state.replacePriceEntries);
@@ -100,6 +95,7 @@ export function PriceAdvisorPage(): JSX.Element {
     const legacyEntries = loadEntries();
     if (Object.keys(legacyEntries).length > 0) {
       replacePriceEntries(legacyEntries);
+      window.localStorage.removeItem(STORAGE_KEY);
     }
   }, [entries, replacePriceEntries]);
 
@@ -113,8 +109,6 @@ export function PriceAdvisorPage(): JSX.Element {
     };
 
     setPriceEntry(ean, nextEntry);
-    const next = { ...entries, [ean]: nextEntry };
-    saveEntries(next);
   }
 
   async function verifyProduct(product: (typeof LEGACY_PRODUCTS)[number]): Promise<void> {
@@ -298,9 +292,8 @@ export function PriceAdvisorPage(): JSX.Element {
       });
 
       replacePriceEntries(next);
-      saveEntries(next);
     } catch {
-      window.alert("Nie udalo sie wczytac cen. Wybierz plik JSON wyeksportowany z tej aplikacji.");
+      window.alert("Nie udało się wczytać cen. Wybierz plik JSON wyeksportowany z tej aplikacji.");
     }
   }
 
@@ -347,7 +340,7 @@ export function PriceAdvisorPage(): JSX.Element {
         <button
           className={`btn-toggle${onlyInStock ? " active" : ""}`}
           type="button"
-          onClick={toggleOnlyInStock}
+          onClick={() => setOnlyInStock((current) => !current)}
           aria-pressed={onlyInStock}
           title={`${availableCount} z ${LEGACY_PRODUCTS.length} produktow ma stan wiekszy od zera`}
         >

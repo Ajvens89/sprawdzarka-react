@@ -25,7 +25,9 @@
 .orders-page {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  flex: 1;
+  min-height: 0;
+  height: auto;
   background: var(--ord-bg);
   font-family: var(--ord-font);
   color: var(--ord-text);
@@ -427,7 +429,8 @@
    ================================================================ */
 
 .display-page {
-  min-height: 100vh;
+  flex: 1;
+  min-height: 0;
   background: var(--ord-bg);
   font-family: var(--ord-font);
   color: var(--ord-text);
@@ -652,4 +655,54 @@
 .cart-items::-webkit-scrollbar-thumb {
   background: var(--ord-border);
   border-radius: 4px;
+}
+
+.orders-page--blocked {
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.orders-blocked-panel {
+  max-width: 520px;
+  padding: 2rem;
+  border-radius: var(--ord-radius);
+  border: 1px solid var(--ord-border);
+  background: var(--ord-surface);
+  text-align: center;
+}
+
+.orders-blocked-panel h1 {
+  margin-bottom: 0.75rem;
+  font-size: 1.4rem;
+}
+
+.orders-blocked-panel p {
+  color: var(--ord-muted);
+  line-height: 1.55;
+}
+
+.orders-blocked-panel code {
+  color: var(--ord-accent2);
+}
+
+.orders-blocked-link {
+  display: inline-flex;
+  margin-top: 1.25rem;
+  text-decoration: none;
+}
+
+.cart-error {
+  margin-top: 0.75rem;
+  padding: 0.75rem 0.9rem;
+  border-radius: 8px;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  background: rgba(239, 68, 68, 0.12);
+  color: #fecaca;
+  font-size: 0.86rem;
+}
+
+.submit-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
 }

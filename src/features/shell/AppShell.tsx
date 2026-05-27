@@ -6,7 +6,12 @@ import { useAppStore } from "../../store/useAppStore";
 import type { AppSnapshot } from "../../types/app";
 import { useAuth } from "../auth/AuthProvider";
 import { LoginScreen } from "../auth/LoginScreen";
+import { AdminPage } from "../admin/AdminPage";
 import { BistroPage } from "../bistro/BistroPage";
+import { ClientExportPage } from "../client-export/ClientExportPage";
+import { OrdersDisplayPage } from "../orders/OrdersDisplayPage";
+import { OrdersFirebaseGate } from "../orders/OrdersFirebaseGate";
+import { OrdersPage } from "../orders/OrdersPage";
 import { PriceAdvisorPage } from "../prices/PriceAdvisorPage";
 import { ScannerPage } from "../scanner/ScannerPage";
 
@@ -22,8 +27,22 @@ export function AppShell(): JSX.Element {
 
   async function handleImport(file: File | null): Promise<void> {
     if (!file) return;
-    const payload = await readJsonFile<AppSnapshot>(file);
-    importSnapshot(payload);
+
+    if (
+      !window.confirm(
+        "Wczytanie kopii JSON nadpisze bieżące dane w tej przeglądarce. Kontynuować?"
+      )
+    ) {
+      return;
+    }
+
+    try {
+      const payload = await readJsonFile<AppSnapshot>(file);
+      importSnapshot(payload);
+      window.alert("Wczytano kopię zapasową.");
+    } catch {
+      window.alert("Nie udało się wczytać pliku JSON. Wybierz plik wyeksportowany z tej aplikacji.");
+    }
   }
 
   return (
@@ -50,6 +69,20 @@ export function AppShell(): JSX.Element {
               className={({ isActive }) => `tab-btn${isActive ? " active" : ""}`}
             >
               Ceny
+            </NavLink>
+
+            <NavLink
+              to="/admin"
+              className={({ isActive }) => `tab-btn${isActive ? " active" : ""}`}
+            >
+              Administracja
+            </NavLink>
+
+            <NavLink
+              to="/client-export"
+              className={({ isActive }) => `tab-btn${isActive ? " active" : ""}`}
+            >
+              Eksport klienta
             </NavLink>
 
             <NavLink
@@ -155,6 +188,24 @@ export function AppShell(): JSX.Element {
         <Route path="/scanner" element={<ScannerPage />} />
         <Route path="/bistro" element={<BistroPage />} />
         <Route path="/prices" element={<PriceAdvisorPage />} />
+        <Route path="/admin" element={<AdminPage />} />
+        <Route path="/client-export" element={<ClientExportPage />} />
+        <Route
+          path="/orders"
+          element={
+            <OrdersFirebaseGate>
+              <OrdersPage />
+            </OrdersFirebaseGate>
+          }
+        />
+        <Route
+          path="/orders-display"
+          element={
+            <OrdersFirebaseGate>
+              <OrdersDisplayPage />
+            </OrdersFirebaseGate>
+          }
+        />
       </Routes>
     </div>
   );

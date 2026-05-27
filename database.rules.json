@@ -1,0 +1,20 @@
+{
+  "rules": {
+    "sprawdzarka_v1": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "orders_live": {
+      ".read": "auth != null",
+      ".write": "auth != null",
+      "_meta": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      },
+      "$orderId": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
+    }
+  }
+}
