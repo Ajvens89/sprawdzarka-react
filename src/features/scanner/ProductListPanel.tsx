@@ -93,7 +93,7 @@ export function ProductListPanel({
           {filteredProducts.length === 0 ? (
             <div className="empty-state">Brak produktów pasujących do aktualnego filtra.</div>
           ) : (
-            filteredProducts.map((product) => {
+            filteredProducts.map((product, index) => {
               const stockState = getStockState(product.ean, stock);
               const verified = Boolean(inventoryVerified[product.ean]);
               const qty = inventoryCounts[product.ean] ?? 0;
@@ -104,7 +104,7 @@ export function ProductListPanel({
 
               return (
                 <button
-                  key={product.ean}
+                  key={`${product.ean}-${index}`}
                   type="button"
                   className={`product-item${outOfStockClass}${verificationClass}${differenceClass}`}
                   data-ean={product.ean}
