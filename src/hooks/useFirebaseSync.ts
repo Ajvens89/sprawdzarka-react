@@ -1,7 +1,7 @@
 import { onValue, ref, runTransaction } from "firebase/database";
 import { useEffect, useMemo, useRef } from "react";
 import { database, firebasePath, isFirebaseConfigured } from "../lib/firebase";
-import { mergeRemoteSnapshots } from "../lib/mergeRemoteSnapshot";
+import { mergeRemoteSnapshots, shouldPullRemoteSnapshot } from "../lib/mergeRemoteSnapshot";
 import { useAppStore } from "../store/useAppStore";
 import type { RemoteSnapshot } from "../types/app";
 
@@ -41,6 +41,7 @@ export function useFirebaseSync(isAuthenticated: boolean): void {
   const retryTimerRef = useRef<number | null>(null);
   const localVersionRef = useRef(localDataVersion);
   const payloadRef = useRef(payload);
+  const needsInitialPullRef = useRef(isAuthenticated);
 
   useEffect(() => {
     payloadRef.current = payload;
@@ -49,6 +50,17 @@ export function useFirebaseSync(isAuthenticated: boolean): void {
   useEffect(() => {
     localVersionRef.current = localDataVersion;
   }, [localDataVersion]);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      needsInitialPullRef.current = true;
+      return;
+    }
+
+    needsInitialPullRef.current = false;
+    initializedRef.current = false;
+    remoteVersionRef.current = 0;
+  }, [isAuthenticated]);
 
   useEffect(() => {
     const db = database;
@@ -76,9 +88,14 @@ export function useFirebaseSync(isAuthenticated: boolean): void {
 
         remoteVersionRef.current = remoteVersion;
 
-        if (remoteVersion > localVersionRef.current) {
+        const shouldHydrate =
+          needsInitialPullRef.current ||
+          shouldPullRemoteSnapshot(data, localVersionRef.current, payloadRef.current);
+
+        if (shouldHydrate) {
+          needsInitialPullRef.current = false;
           isHydratingRef.current = true;
-          const mergedUpdatedAt = Math.max(remoteVersion, localVersionRef.current) + 1;
+          const mergedUpdatedAt = Math.max(remoteVersion, localVersionRef.current, Date.now());
           const merged = mergeRemoteSnapshots(data, payloadRef.current, mergedUpdatedAt);
           hydrateRemoteSnapshot(merged);
           localVersionRef.current = mergedUpdatedAt;

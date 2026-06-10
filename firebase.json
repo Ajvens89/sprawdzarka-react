@@ -22,6 +22,13 @@
         }
       },
       {
+        "source": "/api/infakt",
+        "function": {
+          "functionId": "infaktProxy",
+          "region": "europe-west1"
+        }
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }

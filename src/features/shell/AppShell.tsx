@@ -3,6 +3,7 @@ import { NavLink, Route, Routes, Navigate } from "react-router-dom";
 import { EVENT_DATE, EVENT_NAME } from "../../data/meta";
 import { downloadJson, readJsonFile } from "../../lib/utils";
 import { useAppStore } from "../../store/useAppStore";
+import { exportClientExportSnapshot, importClientExportSnapshot } from "../../store/useClientExportStore";
 import type { AppSnapshot } from "../../types/app";
 import { useAuth } from "../auth/AuthProvider";
 import { LoginScreen } from "../auth/LoginScreen";
@@ -39,7 +40,12 @@ export function AppShell(): JSX.Element {
     try {
       const payload = await readJsonFile<AppSnapshot>(file);
       importSnapshot(payload);
-      window.alert("Wczytano kopię zapasową.");
+      importClientExportSnapshot(payload.clientExport);
+      window.alert(
+        payload.clientExport
+          ? "Wczytano kopię zapasową wraz ze szkicem eksportu klienta."
+          : "Wczytano kopię zapasową."
+      );
     } catch {
       window.alert("Nie udało się wczytać pliku JSON. Wybierz plik wyeksportowany z tej aplikacji.");
     }
@@ -115,7 +121,12 @@ export function AppShell(): JSX.Element {
           <button
             className="btn-ghost gsb-btn"
             type="button"
-            onClick={() => downloadJson("sprawdzarka-backup.json", exportSnapshot())}
+            onClick={() =>
+              downloadJson("sprawdzarka-backup.json", {
+                ...exportSnapshot(),
+                clientExport: exportClientExportSnapshot()
+              })
+            }
           >
             Kopia JSON
           </button>
@@ -149,7 +160,8 @@ export function AppShell(): JSX.Element {
 
       {isFirebaseEnabled && !user ? (
         <div className="banner banner-warning" style={{ marginBottom: "1rem" }}>
-          <strong>Tryb lokalny</strong> — dane zapisują się tylko w tej przeglądarce. Kliknij{" "}
+          <strong>Tryb lokalny</strong> — dane (w tym koszty zakupu i marża) zapisują się tylko w tej przeglądarce.
+          Kliknij{" "}
           <button
             type="button"
             className="btn-ghost gsb-btn"

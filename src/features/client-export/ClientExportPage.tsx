@@ -271,6 +271,7 @@ export function ClientExportPage(): JSX.Element {
   const updateLine = useClientExportStore((state) => state.updateLine);
   const removeLine = useClientExportStore((state) => state.removeLine);
   const appendLine = useClientExportStore((state) => state.appendLine);
+  const resetDraft = useClientExportStore((state) => state.resetDraft);
 
   const stock = useMemo(() => getResolvedStock(stockOverrides), [stockOverrides]);
   const products = useMemo(() => getResolvedProducts(priceOverrides), [priceOverrides]);
@@ -332,6 +333,13 @@ export function ClientExportPage(): JSX.Element {
     event.target.value = "";
     if (!file) return;
 
+    if (
+      (deductionItems.length > 0 || remainingItems.length > 0 || receiptTotalInput || notes) &&
+      !window.confirm("Wczytanie Excela nadpisze bieżący szkic rozliczenia. Kontynuować?")
+    ) {
+      return;
+    }
+
     try {
       const parsed = parseClientGamesWorkbook(await file.arrayBuffer());
       if (parsed.deductionItems.length > 0) {
@@ -354,6 +362,13 @@ export function ClientExportPage(): JSX.Element {
 
   function runQuickAction(actionId: (typeof QUICK_ACTIONS)[number]["id"]): void {
     if (actionId === "stock") {
+      if (
+        remainingItems.length > 0 &&
+        !window.confirm("Ta akcja zastąpi całą listę „Zostało” danymi ze stanów magazynowych. Kontynuować?")
+      ) {
+        return;
+      }
+
       const lines = buildStockLines(products, stock);
       setRemainingItems(lines);
       setStatus({ type: "success", message: `Uzupełniono „Zostało” ze stanów magazynowych (${lines.length} poz.).` });
@@ -361,6 +376,13 @@ export function ClientExportPage(): JSX.Element {
     }
 
     if (actionId === "inventory") {
+      if (
+        remainingItems.length > 0 &&
+        !window.confirm("Ta akcja zastąpi całą listę „Zostało” danymi z inwentaryzacji. Kontynuować?")
+      ) {
+        return;
+      }
+
       const lines = buildInventoryRemainingLines(products, stock, inventoryCounts, inventoryVerified);
       setRemainingItems(lines);
       setStatus({ type: "success", message: `Uzupełniono „Zostało” z inwentaryzacji (${lines.length} poz.).` });
@@ -368,10 +390,37 @@ export function ClientExportPage(): JSX.Element {
     }
 
     if (actionId === "sold") {
+      if (
+        deductionItems.length > 0 &&
+        !window.confirm("Ta akcja zastąpi całą listę „Do skasowania” danymi ze sprzedaży. Kontynuować?")
+      ) {
+        return;
+      }
+
       const lines = buildSoldLines(products, stock, inventoryCounts, inventoryVerified);
       setDeductionItems(lines);
       setStatus({ type: "success", message: `Uzupełniono „Do skasowania” ze sprzedanych sztuk (${lines.length} poz.).` });
     }
+  }
+
+  function handleClearDraft(): void {
+    if (
+      deductionItems.length === 0 &&
+      remainingItems.length === 0 &&
+      !receiptTotalInput &&
+      !notes &&
+      title === "Rozliczenie paragonu – gry"
+    ) {
+      setStatus({ type: "info", message: "Szkic jest już pusty." });
+      return;
+    }
+
+    if (!window.confirm("Wyczyścić cały szkic eksportu klienta? Tej operacji nie można cofnąć.")) {
+      return;
+    }
+
+    resetDraft();
+    setStatus({ type: "success", message: "Wyczyszczono szkic eksportu klienta." });
   }
 
   return (
@@ -450,6 +499,10 @@ export function ClientExportPage(): JSX.Element {
 
           <button className="btn-search client-export-download-btn" type="button" onClick={handleExport}>
             <span aria-hidden="true">⬇</span> Pobierz Excel
+          </button>
+
+          <button className="btn-ghost client-export-clear-btn" type="button" onClick={handleClearDraft}>
+            Wyczyść szkic
           </button>
         </section>
 

@@ -1,5 +1,44 @@
 import type { BistroProduct, RemoteSnapshot } from "../types/app";
 
+function countRecordKeys(value: Record<string, unknown> | undefined): number {
+  return Object.keys(value ?? {}).length;
+}
+
+export function remoteHasMoreRecords(
+  remote: Record<string, unknown> | undefined,
+  local: Record<string, unknown> | undefined
+): boolean {
+  return countRecordKeys(remote) > countRecordKeys(local);
+}
+
+export function shouldPullRemoteSnapshot(
+  remote: RemoteSnapshot,
+  localVersion: number,
+  local: Omit<RemoteSnapshot, "updatedAt">
+): boolean {
+  if ((remote.updatedAt ?? 0) > localVersion) {
+    return true;
+  }
+
+  if (remoteHasMoreRecords(remote.costs?.purchase, local.costs?.purchase)) {
+    return true;
+  }
+
+  if (remoteHasMoreRecords(remote.costs?.vat, local.costs?.vat)) {
+    return true;
+  }
+
+  if (remoteHasMoreRecords(remote.prices?.entries, local.prices?.entries)) {
+    return true;
+  }
+
+  if (remoteHasMoreRecords(remote.stock?.overrides, local.stock?.overrides)) {
+    return true;
+  }
+
+  return false;
+}
+
 function mergeRecords<T extends Record<string, unknown>>(
   remote: T | undefined,
   local: T | undefined

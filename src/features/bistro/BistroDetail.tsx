@@ -68,7 +68,17 @@ export function BistroDetail(): JSX.Element {
           <button
             className="bp-delete"
             type="button"
-            onClick={() => deleteBistroProduct(selectedProductId)}
+            onClick={() => {
+              if (
+                !window.confirm(
+                  `Usunąć produkt „${selectedProduct.name}” wraz z historią zakupów? Tej operacji nie można cofnąć.`
+                )
+              ) {
+                return;
+              }
+
+              deleteBistroProduct(selectedProductId);
+            }}
           >
             Usuń
           </button>

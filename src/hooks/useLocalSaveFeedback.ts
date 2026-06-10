@@ -9,6 +9,7 @@ export function useLocalSaveFeedback(): void {
   const inventoryVerified = useAppStore((state) => state.inventoryVerified);
   const bistroProducts = useAppStore((state) => state.bistroProducts);
   const purchaseCosts = useAppStore((state) => state.purchaseCosts);
+  const purchaseVatRates = useAppStore((state) => state.purchaseVatRates);
   const priceOverrides = useAppStore((state) => state.priceOverrides);
   const priceEntries = useAppStore((state) => state.priceEntries);
 
@@ -20,10 +21,11 @@ export function useLocalSaveFeedback(): void {
         inventoryVerified,
         bistroProducts,
         purchaseCosts,
+        purchaseVatRates,
         priceOverrides,
         priceEntries
       }),
-    [stockOverrides, inventoryCounts, inventoryVerified, bistroProducts, purchaseCosts, priceOverrides, priceEntries]
+    [stockOverrides, inventoryCounts, inventoryVerified, bistroProducts, purchaseCosts, purchaseVatRates, priceOverrides, priceEntries]
   );
 
   useEffect(() => {

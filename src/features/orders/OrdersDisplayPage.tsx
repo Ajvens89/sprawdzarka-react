@@ -7,6 +7,8 @@ import { isActiveOrder } from './orders.utils';
 export function OrdersDisplayPage() {
   useOrdersSync();
   const orders = useOrdersStore((s) => s.orders);
+  const lastSyncError = useOrdersStore((s) => s.lastSyncError);
+  const clearSyncError = useOrdersStore((s) => s.clearSyncError);
   const activeCount = orders.filter(isActiveOrder).length;
 
   return (
@@ -21,6 +23,18 @@ export function OrdersDisplayPage() {
             : 'Kolejka pusta'}
         </div>
       </header>
+
+      {lastSyncError ? (
+        <div className="orders-sync-error" role="alert">
+          <div className="orders-sync-error-copy">
+            <strong>Błąd synchronizacji z Bistro</strong>
+            <p>{lastSyncError}</p>
+          </div>
+          <button className="orders-sync-error-dismiss" type="button" onClick={clearSyncError}>
+            Zamknij
+          </button>
+        </div>
+      ) : null}
 
       <OrdersQueue />
     </div>

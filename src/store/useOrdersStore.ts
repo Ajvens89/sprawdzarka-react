@@ -25,6 +25,7 @@ interface OrdersState {
   nextOrderNumber: number;
   processingDoneIds: string[];
   lastSubmitError: string | null;
+  lastSyncError: string | null;
 
   addToCart: (product: {
     id: string;
@@ -38,6 +39,7 @@ interface OrdersState {
   setCartNote: (note: string) => void;
   clearCart: () => void;
   clearSubmitError: () => void;
+  clearSyncError: () => void;
 
   submitOrder: (createdBy?: string) => Promise<SubmitOrderResult>;
   setOrders: (orders: Order[]) => void;
@@ -59,6 +61,7 @@ export const useOrdersStore = create<OrdersState>((set, get) => ({
   nextOrderNumber: 1,
   processingDoneIds: [],
   lastSubmitError: null,
+  lastSyncError: null,
 
   addToCart(product) {
     set((state) => {
@@ -112,6 +115,10 @@ export const useOrdersStore = create<OrdersState>((set, get) => ({
 
   clearSubmitError() {
     set({ lastSubmitError: null });
+  },
+
+  clearSyncError() {
+    set({ lastSyncError: null });
   },
 
   async submitOrder(createdBy = "kasa") {
@@ -203,7 +210,9 @@ export const useOrdersStore = create<OrdersState>((set, get) => ({
       const claim = await tryClaimOrderDoneSync(id, DEVICE_WORKER_ID);
 
       if (!claim.ok) {
+        const message = `Zamówienie #${order.number}: nie udało się rozpocząć synchronizacji z Bistro (${claim.reason ?? "brak blokady"}). Spróbuj ponownie za chwilę.`;
         console.warn(`[orders] Pomijam #${order.number}: ${claim.reason ?? "brak claimu"}`);
+        set({ lastSyncError: message });
         return;
       }
 
@@ -214,9 +223,11 @@ export const useOrdersStore = create<OrdersState>((set, get) => ({
 
       if (!syncResult.synced) {
         await releaseOrderDoneSyncClaim(id);
+        const message = `Zamówienie #${order.number}: nie zsynchronizowano z Bistro (${syncResult.skipReason ?? "nieznany błąd"}). Sprzedaż nie została zaksięgowana.`;
         console.warn(
           `[orders] Nie zsynchronizowano #${order.number}: ${syncResult.skipReason ?? "nieznany błąd"}`
         );
+        set({ lastSyncError: message });
         return;
       }
 
@@ -234,9 +245,15 @@ export const useOrdersStore = create<OrdersState>((set, get) => ({
                 syncedToBistroAt: Date.now()
               }
             : item
-        )
+        ),
+        lastSyncError: null
       }));
     } catch (error) {
+      const message =
+        error instanceof Error
+          ? `Zamówienie #${order.number}: ${error.message}`
+          : `Zamówienie #${order.number}: nie udało się zakończyć synchronizacji z Bistro.`;
+      set({ lastSyncError: message });
       console.error(`[orders] Błąd podczas finalizacji zamówienia ${id}`, error);
 
       if (rollback && Object.keys(rollback).length > 0) {

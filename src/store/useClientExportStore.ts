@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { ClientGameLine } from "../lib/exportClientGamesExcel";
+import type { ClientExportSnapshot } from "../types/app";
 
 export type EditableClientLine = ClientGameLine & { id: string };
 
@@ -77,3 +78,28 @@ export const useClientExportStore = create<ClientExportState>()(
     }
   )
 );
+
+export function exportClientExportSnapshot(): ClientExportSnapshot {
+  const state = useClientExportStore.getState();
+  return {
+    title: state.title,
+    receiptTotalInput: state.receiptTotalInput,
+    notes: state.notes,
+    deductionItems: state.deductionItems,
+    remainingItems: state.remainingItems,
+    targetList: state.targetList
+  };
+}
+
+export function importClientExportSnapshot(snapshot: ClientExportSnapshot | undefined): void {
+  if (!snapshot) return;
+
+  useClientExportStore.setState({
+    title: snapshot.title ?? initialState.title,
+    receiptTotalInput: snapshot.receiptTotalInput ?? "",
+    notes: snapshot.notes ?? "",
+    deductionItems: Array.isArray(snapshot.deductionItems) ? snapshot.deductionItems : [],
+    remainingItems: Array.isArray(snapshot.remainingItems) ? snapshot.remainingItems : [],
+    targetList: snapshot.targetList === "remaining" ? "remaining" : "deduction"
+  });
+}

@@ -297,6 +297,33 @@ export default defineConfig({
           const result = await checkOnlinePrice(ean, title, Number.isFinite(currentPrice) ? currentPrice : 0);
           res.end(JSON.stringify(result));
         });
+        server.middlewares.use("/api/infakt", async (req, res) => {
+          const requestUrl = new URL(req.url ?? "", "http://localhost");
+          const action = requestUrl.searchParams.get("action") ?? "";
+
+          res.setHeader("Content-Type", "application/json; charset=utf-8");
+
+          if (!action) {
+            res.statusCode = 400;
+            res.end(JSON.stringify({ ok: false, message: "Brak parametru action." }));
+            return;
+          }
+
+          try {
+            const { handleInfaktAction } = await import("./functions/infakt.js");
+            const query = Object.fromEntries(requestUrl.searchParams.entries());
+            const payload = await handleInfaktAction(action, query, () => env("INFAKT_API_KEY"));
+            res.end(JSON.stringify({ ok: true, ...payload }));
+          } catch (error) {
+            const statusCode =
+              typeof error === "object" && error && "statusCode" in error
+                ? Number((error as { statusCode: number }).statusCode)
+                : 502;
+            const message = error instanceof Error ? error.message : "Nie udało się połączyć z inFakt.";
+            res.statusCode = Number.isFinite(statusCode) ? statusCode : 502;
+            res.end(JSON.stringify({ ok: false, message }));
+          }
+        });
       }
     }
   ],

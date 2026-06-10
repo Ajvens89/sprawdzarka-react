@@ -4,13 +4,7 @@ import { xlsxDownload } from "../../lib/export";
 import { formatMoney, normalizeText } from "../../lib/utils";
 import { useAppStore } from "../../store/useAppStore";
 import type { PriceEntry } from "../../types/app";
-
-type PriceCheckResponse = {
-  ok: boolean;
-  price: number | null;
-  source: string;
-  message: string;
-};
+import { fetchOnlinePrice } from "../../lib/priceCheck";
 
 const STORAGE_KEY = "sprawdzarka-price-advisor-v1";
 const EXPORT_VERSION = 1;
@@ -115,23 +109,11 @@ export function PriceAdvisorPage(): JSX.Element {
     setVerifying((state) => ({ ...state, [product.ean]: true }));
 
     try {
-      const params = new URLSearchParams({
+      const result = await fetchOnlinePrice({
         ean: product.ean,
         title: productTitle(product),
-        currentPrice: String(product.cena)
+        currentPrice: product.cena
       });
-      const response = await fetch(`/api/price-check?${params.toString()}`);
-      const contentType = response.headers.get("content-type") ?? "";
-
-      if (!contentType.includes("application/json")) {
-        updateEntry(product.ean, {
-          checkedAt: new Date().toLocaleString("pl-PL"),
-          status: "Serwer cen nie jest wdrozony na Firebase. Uruchom: npm run deploy"
-        });
-        return;
-      }
-
-      const result = (await response.json()) as PriceCheckResponse;
 
       updateEntry(product.ean, {
         marketPrice: result.price ? result.price.toFixed(2).replace(".", ",") : entries[product.ean]?.marketPrice ?? "",
@@ -371,7 +353,7 @@ export function PriceAdvisorPage(): JSX.Element {
           <span>%</span>
         </label>
 
-        <div className="price-actions-group">
+        <div className="price-actions-group price-actions-group--primary">
           <button className="btn-search" type="button" onClick={() => void verifyVisible()}>
             Zweryfikuj widoczne
           </button>

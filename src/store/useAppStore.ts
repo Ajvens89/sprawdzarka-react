@@ -54,6 +54,7 @@ type AppState = SyncMeta & {
   setStockOverride: (ean: string, qty: number) => void;
   replaceStockOverrides: (overrides: StockMap) => void;
   approvePriceOverrides: (overrides: PriceMap) => void;
+  clearPriceOverride: (ean: string) => void;
   setPriceEntry: (ean: string, entry: PriceEntry) => void;
   replacePriceEntries: (entries: PriceEntriesMap) => void;
   setPurchaseCost: (ean: string, cost: number | null) => void;
@@ -328,6 +329,18 @@ export const useAppStore = create<AppState>()(
         get().markDirty();
       },
 
+      clearPriceOverride: (ean) => {
+        const normalizedEan = ean.replace(/\D/g, "").slice(0, 13);
+        if (!/^\d{13}$/.test(normalizedEan)) return;
+
+        set((state) => {
+          const next = { ...state.priceOverrides };
+          delete next[normalizedEan];
+          return { priceOverrides: next };
+        });
+        get().markDirty();
+      },
+
       setPriceEntry: (ean, entry) => {
         const sanitized = sanitizePriceEntries({ [ean]: entry });
         const nextEntry = sanitized[ean];
@@ -530,7 +543,7 @@ export const useAppStore = create<AppState>()(
       },
 
       exportSnapshot: () => ({
-        version: 1,
+        version: 2,
         exportedAt: new Date().toISOString(),
         stockOverrides: get().stockOverrides,
         priceOverrides: get().priceOverrides,

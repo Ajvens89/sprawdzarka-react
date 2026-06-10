@@ -99,6 +99,19 @@ export function InventoryPanel(): JSX.Element {
     setStatus({ type: "success", message: "Wyeksportowano plik Excel ze stanami." });
   }
 
+  function handleResetInventory(): void {
+    if (
+      !window.confirm(
+        "Reset wyczyści wszystkie zeskanowane stany inwentaryzacji. Tej operacji nie można cofnąć. Kontynuować?"
+      )
+    ) {
+      return;
+    }
+
+    resetInventory();
+    setStatus({ type: "info", message: "Wyczyszczono dane inwentaryzacji." });
+  }
+
   return (
     <aside className="panel panel-inventory">
       <span className="panel-label">Weryfikacja stanów</span>
@@ -134,7 +147,9 @@ export function InventoryPanel(): JSX.Element {
         </button>
         <button className="btn-ghost" type="button" onClick={() => setIsReportOpen(true)}>Raport</button>
         <button className="btn-ghost" type="button" onClick={handleExport}>Eksport XLSX</button>
-        <button className="btn-ghost btn-ghost--danger" type="button" onClick={resetInventory}>Reset</button>
+        <button className="btn-ghost btn-ghost--danger" type="button" onClick={handleResetInventory}>
+          Reset
+        </button>
       </div>
 
       <div

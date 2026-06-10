@@ -64,6 +64,27 @@ export type InventoryEntry = {
   stockKnown: boolean;
 };
 
+export type ClientExportSnapshot = {
+  title: string;
+  receiptTotalInput: string;
+  notes: string;
+  deductionItems: Array<{
+    id: string;
+    title: string;
+    qty: number;
+    unitPrice: number;
+    notes?: string;
+  }>;
+  remainingItems: Array<{
+    id: string;
+    title: string;
+    qty: number;
+    unitPrice: number;
+    notes?: string;
+  }>;
+  targetList: "deduction" | "remaining";
+};
+
 export type AppSnapshot = {
   version: number;
   exportedAt: string;
@@ -76,6 +97,7 @@ export type AppSnapshot = {
   inventoryVerified: InventoryVerifiedMap;
   bistroProducts: BistroProduct[];
   bistroSelectedId: string | null;
+  clientExport?: ClientExportSnapshot;
 };
 
 export type RemoteSnapshot = {

@@ -438,6 +438,58 @@
   .stock-badge.out-stock   .stock-badge-label { color: var(--error); }
   .stock-badge.unknown-stock .stock-badge-label { color: var(--muted); }
 
+  .stock-override-editor {
+    margin-top: 1.25rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .stock-override-head {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.45rem;
+  }
+
+  .stock-override-label {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 700;
+  }
+
+  .stock-override-badge {
+    font-size: 0.62rem;
+    padding: 0.1rem 0.4rem;
+    border-radius: 999px;
+    background: rgba(245, 158, 11, 0.12);
+    color: var(--warning);
+    border: 1px solid rgba(245, 158, 11, 0.25);
+  }
+
+  .stock-override-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-bottom: 0.65rem;
+  }
+
+  .stock-override-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    align-items: center;
+  }
+
+  .stock-override-input {
+    width: 88px;
+    min-height: 34px;
+  }
+
   /* ── FILTER BAR ── */
   .filter-bar {
     display: flex;
@@ -1935,6 +1987,75 @@
     margin-left: auto;
   }
 
+  @media (max-width: 960px) {
+    .topbar {
+      flex-wrap: wrap;
+      height: auto;
+      padding: 0.55rem 0.65rem;
+      gap: 0.45rem;
+    }
+
+    .topbar-left {
+      flex: 1 1 100%;
+      min-width: 0;
+      overflow-x: auto;
+      overflow-y: hidden;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+
+    .topbar-left::-webkit-scrollbar {
+      display: none;
+    }
+
+    .topbar-left nav {
+      flex-wrap: nowrap;
+      width: max-content;
+      padding-bottom: 0.1rem;
+    }
+
+    .topbar-context {
+      display: none;
+    }
+
+    .topbar-center {
+      margin: 0;
+      order: 3;
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+
+    .topbar-right {
+      order: 2;
+      margin-left: auto;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+  }
+
+  .result-price-check {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.55rem;
+    margin-top: 0.85rem;
+    padding-top: 0.85rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .result-price-check-summary {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    font-size: 0.82rem;
+    color: var(--text2);
+  }
+
+  .result-price-check-link {
+    align-self: flex-start;
+    font-size: 0.78rem;
+  }
+
   /* WORKSPACE */
   .workspace {
     display: grid;
@@ -2536,6 +2657,10 @@
   gap: .5rem;
 }
 
+.price-actions-group--primary {
+  flex: 1 1 100%;
+}
+
 .price-import-button {
   position: relative;
   cursor: pointer;
@@ -2585,6 +2710,28 @@
   margin-bottom: 0;
 }
 
+.admin-inline-note {
+  display: block;
+  margin-top: 0.25rem;
+  color: var(--warning);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+}
+
+.admin-price-input-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
+}
+
+.admin-price-input-wrap .btn-mini {
+  min-width: auto;
+  height: auto;
+  padding: 0.12rem 0.4rem;
+  font-size: 0.62rem;
+}
+
 .admin-table-wrap {
   padding: 0;
   overflow: hidden;
@@ -2628,6 +2775,26 @@
 .admin-status--unknown {
   background: rgba(148, 163, 184, 0.14);
   color: var(--muted);
+}
+
+.admin-status--market-missing {
+  background: rgba(148, 163, 184, 0.14);
+  color: var(--muted);
+}
+
+.admin-status--market-ok {
+  background: rgba(34, 197, 94, 0.14);
+  color: #86efac;
+}
+
+.admin-status--market-too-high {
+  background: rgba(239, 68, 68, 0.14);
+  color: #fca5a5;
+}
+
+.admin-status--market-low {
+  background: rgba(37, 99, 235, 0.14);
+  color: #93c5fd;
 }
 
 .admin-row--loss {
@@ -3000,6 +3167,11 @@
   align-items: center;
   justify-content: center;
   gap: 0.45rem;
+}
+
+.client-export-clear-btn {
+  width: 100%;
+  margin-top: 0.55rem;
 }
 
 .client-export-actions {

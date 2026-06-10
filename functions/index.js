@@ -1,4 +1,5 @@
 import { onRequest } from "firebase-functions/v2/https";
+import { handleInfaktAction } from "./infakt.js";
 
 const MIN_TRUSTED_RATIO = 0.68;
 const MAX_TRUSTED_RATIO = 1.8;
@@ -335,3 +336,53 @@ export const priceCheck = onRequest(
   const result = await checkOnlinePrice(ean, title, Number.isFinite(currentPrice) ? currentPrice : 0);
   res.json(result);
 });
+
+export const infaktProxy = onRequest(
+  {
+    region: "europe-west1",
+    timeoutSeconds: 120,
+    secrets: ["INFAKT_API_KEY"]
+  },
+  async (req, res) => {
+    const corsOrigin = resolveCorsOrigin(req);
+    res.setHeader("Access-Control-Allow-Origin", corsOrigin);
+    res.setHeader("Vary", "Origin");
+    res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+
+    if (req.method === "OPTIONS") {
+      res.status(204).send("");
+      return;
+    }
+
+    if (req.method !== "GET") {
+      res.status(405).json({ ok: false, message: "Dozwolona jest tylko metoda GET." });
+      return;
+    }
+
+    if (!isAllowedOrigin(req)) {
+      res.status(403).json({ ok: false, message: "Zablokowane źródło żądania." });
+      return;
+    }
+
+    if (!checkRateLimit(getClientIp(req))) {
+      res.status(429).json({ ok: false, message: "Za dużo zapytań do inFakt. Spróbuj za chwilę." });
+      return;
+    }
+
+    const action = String(req.query.action ?? "");
+    if (!action) {
+      res.status(400).json({ ok: false, message: "Brak parametru action." });
+      return;
+    }
+
+    try {
+      const payload = await handleInfaktAction(action, req.query, () => process.env.INFAKT_API_KEY ?? "");
+      res.json({ ok: true, ...payload });
+    } catch (error) {
+      const statusCode = typeof error?.statusCode === "number" ? error.statusCode : 502;
+      const message = error instanceof Error ? error.message : "Nie udało się połączyć z inFakt.";
+      res.status(statusCode).json({ ok: false, message });
+    }
+  }
+);
