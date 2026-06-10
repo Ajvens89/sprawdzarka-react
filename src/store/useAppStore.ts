@@ -16,6 +16,7 @@ import type {
   StockMap
 } from "../types/app";
 import { clampFloor, localDateTimeLabel, safeNumber, todayStr, uid } from "../lib/utils";
+import { sanitizeStockOverrides } from "../lib/snapshotSanitize";
 
 type SyncMeta = {
   saveStatus: SaveStatus;
@@ -507,7 +508,7 @@ export const useAppStore = create<AppState>()(
         const bistroProducts = sanitizeBistroProducts(snapshot.bistro?.products);
 
         set({
-          stockOverrides: { ...(snapshot.stock?.overrides ?? {}) },
+          stockOverrides: sanitizeStockOverrides(snapshot.stock?.overrides),
           priceOverrides: sanitizePriceOverrides(snapshot.prices?.overrides),
           purchaseCosts: sanitizePurchaseCosts(snapshot.costs?.purchase),
           purchaseVatRates: sanitizePurchaseVatRates(snapshot.costs?.vat),
@@ -529,7 +530,7 @@ export const useAppStore = create<AppState>()(
         const bistroProducts = sanitizeBistroProducts(snapshot.bistroProducts);
 
         set({
-          stockOverrides: { ...(snapshot.stockOverrides ?? {}) },
+          stockOverrides: sanitizeStockOverrides(snapshot.stockOverrides),
           priceOverrides: sanitizePriceOverrides(snapshot.priceOverrides),
           purchaseCosts: sanitizePurchaseCosts(snapshot.purchaseCosts ?? {}),
           purchaseVatRates: sanitizePurchaseVatRates(snapshot.purchaseVatRates ?? {}),

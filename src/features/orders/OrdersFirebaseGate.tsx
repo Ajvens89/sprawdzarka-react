@@ -24,10 +24,13 @@ export function OrdersFirebaseGate({ children }: { children: ReactNode }): JSX.E
           <h1>Kasa wymaga Firebase</h1>
           <p>
             Moduł zamówień działa tylko po zalogowaniu i synchronizacji z chmurą. Skonfiguruj plik{" "}
-            <code>.env.local</code>, zaloguj się w głównej aplikacji i wróć tutaj.
+            <code>.env</code>, zaloguj się w <Link to="/ustawienia">Ustawieniach</Link> i wróć tutaj.
           </p>
-          <Link className="btn-search orders-blocked-link" to="/scanner">
-            Przejdź do Sprawdzarki
+          <Link className="btn-search orders-blocked-link" to="/ustawienia">
+            Otwórz Ustawienia
+          </Link>
+          <Link className="btn-ghost orders-blocked-link" to="/sprzedaz/skanuj">
+            Skanuj grę
           </Link>
         </div>
       </div>

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useAuth } from "./AuthProvider";
 
 const ERRORS: Record<string, string> = {
-  "auth/invalid-email": "Nieprawidłowy format e-maila.",
+  "auth/unauthorized-email": "Ten adres e-mail nie ma dostępu do danych wydarzenia.",
   "auth/user-not-found": "Nie znaleziono użytkownika.",
   "auth/user-disabled": "To konto jest zablokowane w Firebase.",
   "auth/wrong-password": "Błędne hasło.",
@@ -55,7 +55,11 @@ export function LoginScreen({
       await signIn(email.trim(), password);
       onSuccess?.();
     } catch (err) {
-      setError(getAuthErrorMessage(err, "Nie udało się zalogować."));
+      const hint =
+        typeof err === "object" && err && "hint" in err && (err as { hint?: string }).hint
+          ? ` Dozwolone konta: ${(err as { hint: string }).hint}`
+          : "";
+      setError(getAuthErrorMessage(err, "Nie udało się zalogować.") + hint);
     } finally {
       setIsSubmitting(false);
     }

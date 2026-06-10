@@ -1,8 +1,9 @@
-import React from 'react';
-import { useOrdersSync } from '../../hooks/useOrdersSync';
-import { OrdersQueue } from './OrdersQueue';
-import { useOrdersStore } from '../../store/useOrdersStore';
-import { isActiveOrder } from './orders.utils';
+import React from "react";
+import { useOrdersSync } from "../../hooks/useOrdersSync";
+import { PageHeader } from "../../components/ui/PageHeader";
+import { OrdersQueue } from "./OrdersQueue";
+import { useOrdersStore } from "../../store/useOrdersStore";
+import { isActiveOrder } from "./orders.utils";
 
 export function OrdersDisplayPage() {
   useOrdersSync();
@@ -12,17 +13,16 @@ export function OrdersDisplayPage() {
   const activeCount = orders.filter(isActiveOrder).length;
 
   return (
-    <div className="display-page">
-      <header className="display-page-header">
-        <h1 className="display-page-title">
-          <span className="orders-title-accent">⚡</span> Wydawanie
-        </h1>
-        <div className="display-badge">
-          {activeCount > 0
-            ? `${activeCount} aktywn${activeCount === 1 ? 'e' : 'ych'}`
-            : 'Kolejka pusta'}
-        </div>
-      </header>
+    <div className="module-page display-page">
+      <PageHeader
+        label="Sprzedaż"
+        title="Wydawanie"
+        description={
+          activeCount > 0
+            ? `${activeCount} aktywn${activeCount === 1 ? "e" : "ych"} zamówien${activeCount === 1 ? "ie" : "ia"} w kolejce.`
+            : "Kolejka pusta — oczekiwanie na zamówienia z kasy."
+        }
+      />
 
       {lastSyncError ? (
         <div className="orders-sync-error" role="alert">

@@ -1,0 +1,76 @@
+[data-theme="light"],
+:root:not([data-theme="dark"]) {
+  --bg: #f4f6f9;
+  --surface: #ffffff;
+  --surface2: #eef2f7;
+  --surface3: #e2e8f0;
+  --border: #dbe3ee;
+  --border2: #c9d4e3;
+  --accent: #4338ca;
+  --accent-strong: #3730a3;
+  --blue: #4338ca;
+  --blue-hover: #3730a3;
+  --blue-muted: rgba(67, 56, 202, 0.1);
+  --accent-glow: rgba(67, 56, 202, 0.08);
+  --text: #1e293b;
+  --text2: #475569;
+  --muted: #64748b;
+  --success: #15803d;
+  --warning: #b45309;
+  --error: #b91c1c;
+  --panel: #ffffff;
+  --line-strong: rgba(15, 23, 42, 0.08);
+  --hover-soft: rgba(15, 23, 42, 0.04);
+  --shadow-card: 0 1px 3px rgba(15, 23, 42, 0.08);
+  --shadow-elevated: 0 8px 24px rgba(15, 23, 42, 0.1);
+  --input-bg: #ffffff;
+  --input-border: #c9d4e3;
+  --input-inset-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.04);
+  --input-focus-border: #4338ca;
+  --input-focus-shadow: 0 0 0 3px rgba(67, 56, 202, 0.15);
+  --btn-ghost-bg: #eef2f7;
+  --btn-ghost-border: #c9d4e3;
+  --btn-ghost-color: #475569;
+  --btn-ghost-hover-bg: #e2e8f0;
+  --btn-ghost-hover-color: #1e293b;
+  --section-tint-bg: #eef2f7;
+  --inventory-status-bg: #eef2f7;
+}
+
+[data-theme="dark"] {
+  --bg: #0b1117;
+  --surface: #111827;
+  --surface2: #1f2937;
+  --surface3: #374151;
+  --border: #1f2937;
+  --border2: #374151;
+  --accent: #c8f247;
+  --accent-strong: #d4f53c;
+  --blue: #2563eb;
+  --blue-hover: #1d4ed8;
+  --blue-muted: rgba(37, 99, 235, 0.12);
+  --accent-glow: rgba(200, 242, 71, 0.1);
+  --text: #e2eaf6;
+  --text2: #9aafc8;
+  --muted: #4e6070;
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --error: #ef4444;
+  --panel: #0d1520;
+  --line-strong: rgba(255, 255, 255, 0.08);
+  --hover-soft: rgba(255, 255, 255, 0.035);
+  --shadow-card: 0 1px 4px rgba(0, 0, 0, 0.3);
+  --shadow-elevated: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --input-bg: #080f18;
+  --input-border: rgba(255, 255, 255, 0.09);
+  --input-inset-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02);
+  --input-focus-border: rgba(37, 99, 235, 0.7);
+  --input-focus-shadow: 0 0 0 3px rgba(37, 99, 235, 0.13), inset 0 1px 0 rgba(255, 255, 255, 0.02);
+  --btn-ghost-bg: #1e2d40;
+  --btn-ghost-border: rgba(255, 255, 255, 0.08);
+  --btn-ghost-color: #c3d0e2;
+  --btn-ghost-hover-bg: #263648;
+  --btn-ghost-hover-color: #f0f5ff;
+  --section-tint-bg: rgba(6, 10, 17, 0.45);
+  --inventory-status-bg: rgba(8, 11, 17, 0.6);
+}

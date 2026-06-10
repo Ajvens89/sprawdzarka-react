@@ -23,7 +23,15 @@ type DraftRow = InfaktImportLine & {
   ean: string;
 };
 
-function defaultDateRange(): { from: string; to: string } {
+function monthToDateDefault(): { from: string; to: string } {
+  const now = new Date();
+  const from = new Date(now.getFullYear(), now.getMonth(), 1);
+  const fmt = (date: Date) =>
+    `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+  return { from: fmt(from), to: fmt(now) };
+}
+
+function eventDateRange(): { from: string; to: string } {
   const match = EVENT_DATE.match(/(\d{2})\.(\d{2})\.(\d{4})/);
   if (!match) {
     return { from: "2026-03-01", to: "2026-03-31" };
@@ -75,7 +83,8 @@ function productOptions(query: string) {
 }
 
 export function InfaktImportPanel(): JSX.Element {
-  const defaults = defaultDateRange();
+  const monthDefaults = monthToDateDefault();
+  const eventDefaults = eventDateRange();
   const purchaseCosts = useAppStore((state) => state.purchaseCosts);
   const purchaseVatRates = useAppStore((state) => state.purchaseVatRates);
   const stockOverrides = useAppStore((state) => state.stockOverrides);
@@ -84,8 +93,8 @@ export function InfaktImportPanel(): JSX.Element {
   const stock = useMemo(() => getResolvedStock(stockOverrides), [stockOverrides]);
 
   const [sourceMode, setSourceMode] = useState<SourceMode>("infakt");
-  const [dateFrom, setDateFrom] = useState(defaults.from);
-  const [dateTo, setDateTo] = useState(defaults.to);
+  const [dateFrom, setDateFrom] = useState(monthDefaults.from);
+  const [dateTo, setDateTo] = useState(monthDefaults.to);
   const [status, setStatus] = useState<{ type: "info" | "success" | "error"; message: string } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [infaktCosts, setInfaktCosts] = useState<InfaktCostSummary[]>([]);
@@ -279,6 +288,27 @@ export function InfaktImportPanel(): JSX.Element {
           <span>Do</span>
           <input className="ksef-input" type="date" value={dateTo} onChange={(event) => setDateTo(event.target.value)} />
         </label>
+
+        <button
+          className="btn-ghost"
+          type="button"
+          onClick={() => {
+            setDateFrom(monthDefaults.from);
+            setDateTo(monthDefaults.to);
+          }}
+        >
+          Ten miesiąc
+        </button>
+        <button
+          className="btn-ghost"
+          type="button"
+          onClick={() => {
+            setDateFrom(eventDefaults.from);
+            setDateTo(eventDefaults.to);
+          }}
+        >
+          Zakres wydarzenia
+        </button>
 
         <div className="client-export-target-toggle" role="group" aria-label="Źródło dokumentów">
           <button

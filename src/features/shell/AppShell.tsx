@@ -1,224 +1,160 @@
 import { useState } from "react";
-import { NavLink, Route, Routes, Navigate } from "react-router-dom";
+import { Link, Navigate, Route, Routes } from "react-router-dom";
 import { EVENT_DATE, EVENT_NAME } from "../../data/meta";
-import { downloadJson, readJsonFile } from "../../lib/utils";
+import { LEGACY_ROUTE_REDIRECTS } from "../../navigation/modules";
 import { useAppStore } from "../../store/useAppStore";
-import { exportClientExportSnapshot, importClientExportSnapshot } from "../../store/useClientExportStore";
-import type { AppSnapshot } from "../../types/app";
 import { useAuth } from "../auth/AuthProvider";
-import { LoginScreen } from "../auth/LoginScreen";
-import { AdminPage } from "../admin/AdminPage";
 import { BistroPage } from "../bistro/BistroPage";
 import { ClientExportPage } from "../client-export/ClientExportPage";
 import { OrdersDisplayPage } from "../orders/OrdersDisplayPage";
 import { OrdersFirebaseGate } from "../orders/OrdersFirebaseGate";
 import { OrdersPage } from "../orders/OrdersPage";
-import { PriceAdvisorPage } from "../prices/PriceAdvisorPage";
+import { CostsMarginPage } from "../pricing/CostsMarginPage";
+import { MarketPricesPage } from "../pricing/MarketPricesPage";
+import { PricingImportPage } from "../pricing/PricingImportPage";
+import { InventoryPage } from "../scanner/InventoryPage";
+import { ProductsPage } from "../scanner/ProductsPage";
 import { ScannerPage } from "../scanner/ScannerPage";
+import { InventoryReportPage } from "../reports/InventoryReportPage";
+import { ReportsHubPage } from "../reports/ReportsHubPage";
+import { SettingsPage } from "../settings/SettingsPage";
+import { LegacyMagazynRedirect } from "./LegacyMagazynRedirect";
+import { HelpPanel, ModuleNav } from "./ModuleNav";
+import { NotFoundPage } from "./NotFoundPage";
 
 export function AppShell(): JSX.Element {
-  const { isFirebaseEnabled, logout, user } = useAuth();
-  const [showLogin, setShowLogin] = useState(false);
-
+  const { isFirebaseEnabled, user } = useAuth();
   const saveStatus = useAppStore((state) => state.saveStatus);
   const saveLabel = useAppStore((state) => state.saveLabel);
-  const connectionLabel = useAppStore((state) => state.connectionLabel);
-  const exportSnapshot = useAppStore((state) => state.exportSnapshot);
-  const importSnapshot = useAppStore((state) => state.importSnapshot);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
 
-  async function handleImport(file: File | null): Promise<void> {
-    if (!file) return;
-
-    if (
-      !window.confirm(
-        "Wczytanie kopii JSON nadpisze bieżące dane w tej przeglądarce. Kontynuować?"
-      )
-    ) {
-      return;
-    }
-
-    try {
-      const payload = await readJsonFile<AppSnapshot>(file);
-      importSnapshot(payload);
-      importClientExportSnapshot(payload.clientExport);
-      window.alert(
-        payload.clientExport
-          ? "Wczytano kopię zapasową wraz ze szkicem eksportu klienta."
-          : "Wczytano kopię zapasową."
-      );
-    } catch {
-      window.alert("Nie udało się wczytać pliku JSON. Wybierz plik wyeksportowany z tej aplikacji.");
-    }
+  function closeMobileNav(): void {
+    setMobileNavOpen(false);
   }
 
   return (
-    <div className="container bistro-wide">
-      <div className="topbar">
-        <div className="topbar-left">
-          <nav role="tablist" aria-label="Sekcje aplikacji" style={{ display: "flex" }}>
-            <NavLink
-              to="/scanner"
-              className={({ isActive }) => `tab-btn${isActive ? " active" : ""}`}
-            >
-              Sprawdzarka
-            </NavLink>
+    <div className="app-shell">
+      <header className="app-topbar">
+        <div className="app-topbar__left">
+          <button
+            className="app-topbar__menu-btn"
+            type="button"
+            aria-label={mobileNavOpen ? "Zamknij menu" : "Otwórz menu"}
+            aria-expanded={mobileNavOpen}
+            onClick={() => setMobileNavOpen((open) => !open)}
+          >
+            ☰
+          </button>
+          <div className="app-topbar__brand">
+            <strong className="app-topbar__title">Sprawdzarka ZF</strong>
+            <span className="app-topbar__context">
+              {EVENT_NAME} · {EVENT_DATE}
+            </span>
+          </div>
+        </div>
 
-            <NavLink
-              to="/bistro"
-              className={({ isActive }) => `tab-btn${isActive ? " active" : ""}`}
+        <div className="app-topbar__actions">
+          <nav className="app-topbar__shortcuts" aria-label="Skróty">
+            <Link className="app-topbar__shortcut" to="/sprzedaz/skanuj" title="Start — skanuj grę">
+              <span aria-hidden="true">🏠</span>
+              <span className="app-topbar__shortcut-label">Start</span>
+            </Link>
+            <Link className="app-topbar__shortcut" to="/ustawienia" title="Ustawienia i synchronizacja">
+              <span aria-hidden="true">⚙</span>
+              <span className="app-topbar__shortcut-label">Sync</span>
+            </Link>
+            <button
+              className="app-topbar__shortcut"
+              type="button"
+              title="Szybka pomoc"
+              onClick={() => setHelpOpen(true)}
             >
-              Bistro
-            </NavLink>
-
-            <NavLink
-              to="/prices"
-              className={({ isActive }) => `tab-btn${isActive ? " active" : ""}`}
-            >
-              Ceny
-            </NavLink>
-
-            <NavLink
-              to="/admin"
-              className={({ isActive }) => `tab-btn${isActive ? " active" : ""}`}
-            >
-              Administracja
-            </NavLink>
-
-            <NavLink
-              to="/client-export"
-              className={({ isActive }) => `tab-btn${isActive ? " active" : ""}`}
-            >
-              Eksport klienta
-            </NavLink>
-
-            <NavLink
-              to="/orders"
-              className={({ isActive }) => `tab-btn${isActive ? " active" : ""}`}
-            >
-              Kasa
-            </NavLink>
-
-            <NavLink
-              to="/orders-display"
-              className={({ isActive }) => `tab-btn${isActive ? " active" : ""}`}
-            >
-              Wydawanie
-            </NavLink>
+              <span aria-hidden="true">?</span>
+              <span className="app-topbar__shortcut-label">Pomoc</span>
+            </button>
           </nav>
 
-          <span className="topbar-context">
-            {EVENT_NAME} · {EVENT_DATE}
-          </span>
+          <div className="app-topbar__status">
+            <div className={`save-dot ${saveStatus}`} />
+            <span className={`save-label ${saveStatus}`}>{saveLabel}</span>
+          </div>
         </div>
+      </header>
 
-        <div className="topbar-center">
-          <div className={`save-dot ${saveStatus}`}></div>
-          <span className={`save-label ${saveStatus}`}>{saveLabel}</span>
-          <span id="fbConnStatus">{connectionLabel}</span>
+      {isFirebaseEnabled && !user ? (
+        <div className="banner banner-warning app-local-banner" role="status">
+          Tryb lokalny — dane tylko w tej przeglądarce.{" "}
+          <Link to="/ustawienia">Zaloguj w Ustawieniach</Link>, aby synchronizować.
         </div>
+      ) : null}
 
-        <div className="topbar-right">
-          <button
-            className="btn-ghost gsb-btn"
-            type="button"
-            onClick={() =>
-              downloadJson("sprawdzarka-backup.json", {
-                ...exportSnapshot(),
-                clientExport: exportClientExportSnapshot()
-              })
-            }
-          >
-            Kopia JSON
-          </button>
+      {mobileNavOpen ? (
+        <button
+          className="app-nav-overlay"
+          type="button"
+          aria-label="Zamknij menu"
+          onClick={closeMobileNav}
+        />
+      ) : null}
 
-          <label
-            className="btn-ghost gsb-btn"
-            style={{ cursor: "pointer", display: "inline-flex", alignItems: "center" }}
-          >
-            Wczytaj
-            <input
-              type="file"
-              accept=".json,application/json"
-              style={{ display: "none" }}
-              onChange={(event) => void handleImport(event.target.files?.[0] ?? null)}
-            />
-          </label>
+      <div className="app-layout">
+        <ModuleNav variant="sidebar" mobileOpen={mobileNavOpen} onNavigate={closeMobileNav} />
 
-          {isFirebaseEnabled && user ? (
-            <button className="tab-btn tab-btn--logout" type="button" onClick={() => void logout()}>
-              Wyloguj
-            </button>
-          ) : null}
+        <div className="app-content">
+          <ModuleNav variant="sub" />
 
-          {isFirebaseEnabled && !user ? (
-            <button className="tab-btn" type="button" onClick={() => setShowLogin(true)}>
-              Zaloguj
-            </button>
-          ) : null}
+          <main className="app-main container bistro-wide">
+            <Routes>
+              <Route path="/" element={<Navigate to="/sprzedaz/skanuj" replace />} />
+
+              <Route path="/sprzedaz/skanuj" element={<ScannerPage />} />
+              <Route path="/sprzedaz/inwentaryzacja" element={<InventoryPage />} />
+              <Route path="/sprzedaz/produkty" element={<ProductsPage />} />
+
+              <Route path="/sprzedaz/bistro" element={<BistroPage />} />
+              <Route
+                path="/sprzedaz/kasa"
+                element={
+                  <OrdersFirebaseGate>
+                    <OrdersPage />
+                  </OrdersFirebaseGate>
+                }
+              />
+              <Route
+                path="/sprzedaz/wydawanie"
+                element={
+                  <OrdersFirebaseGate>
+                    <OrdersDisplayPage />
+                  </OrdersFirebaseGate>
+                }
+              />
+
+              <Route path="/ceny/rynek" element={<MarketPricesPage />} />
+              <Route path="/ceny/koszty" element={<CostsMarginPage />} />
+              <Route path="/ceny/import" element={<PricingImportPage />} />
+
+              <Route path="/raporty" element={<ReportsHubPage />} />
+              <Route path="/raporty/klient" element={<ClientExportPage />} />
+              <Route path="/raporty/inwentaryzacja" element={<InventoryReportPage />} />
+
+              <Route path="/ustawienia" element={<SettingsPage />} />
+
+              {Object.entries(LEGACY_ROUTE_REDIRECTS).map(([from, to]) => (
+                <Route key={from} path={from} element={<Navigate to={to} replace />} />
+              ))}
+
+              <Route path="/magazyn/*" element={<LegacyMagazynRedirect />} />
+
+              <Route path="*" element={<NotFoundPage />} />
+            </Routes>
+          </main>
         </div>
       </div>
 
-      {isFirebaseEnabled && !user ? (
-        <div className="banner banner-warning" style={{ marginBottom: "1rem" }}>
-          <strong>Tryb lokalny</strong> — dane (w tym koszty zakupu i marża) zapisują się tylko w tej przeglądarce.
-          Kliknij{" "}
-          <button
-            type="button"
-            className="btn-ghost gsb-btn"
-            style={{ display: "inline-flex", marginLeft: ".35rem" }}
-            onClick={() => setShowLogin(true)}
-          >
-            Zaloguj
-          </button>
-          , aby synchronizować dane przez Firebase.
-        </div>
-      ) : null}
+      <ModuleNav variant="bottom" />
 
-      {showLogin && !user ? (
-        <LoginScreen onSuccess={() => setShowLogin(false)} onClose={() => setShowLogin(false)} />
-      ) : null}
-
-      {!isFirebaseEnabled ? (
-        <div className="banner banner-warning" style={{ marginBottom: "1rem" }}>
-          <strong>Firebase nie skonfigurowane</strong> — aplikacja działa lokalnie w tej
-          przeglądarce. Uzupełnij plik{" "}
-          <code
-            style={{
-              background: "rgba(255,255,255,0.08)",
-              padding: ".1rem .3rem",
-              borderRadius: "4px"
-            }}
-          >
-            .env
-          </code>
-          , aby włączyć logowanie i synchronizację.
-        </div>
-      ) : null}
-
-      <Routes>
-        <Route path="/" element={<Navigate to="/scanner" replace />} />
-        <Route path="/scanner" element={<ScannerPage />} />
-        <Route path="/bistro" element={<BistroPage />} />
-        <Route path="/prices" element={<PriceAdvisorPage />} />
-        <Route path="/admin" element={<AdminPage />} />
-        <Route path="/client-export" element={<ClientExportPage />} />
-        <Route
-          path="/orders"
-          element={
-            <OrdersFirebaseGate>
-              <OrdersPage />
-            </OrdersFirebaseGate>
-          }
-        />
-        <Route
-          path="/orders-display"
-          element={
-            <OrdersFirebaseGate>
-              <OrdersDisplayPage />
-            </OrdersFirebaseGate>
-          }
-        />
-      </Routes>
+      {helpOpen ? <HelpPanel onClose={() => setHelpOpen(false)} /> : null}
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { LEGACY_PRODUCTS, filterProducts, getInventorySummary, getResolvedProducts, getResolvedStock, getStockState } from "../../lib/scanner";
 import { formatPrice, normalizeText } from "../../lib/utils";
 import { useAppStore } from "../../store/useAppStore";
@@ -5,7 +6,7 @@ import { useAppStore } from "../../store/useAppStore";
 export function ProductListPanel({
   onSelectProduct
 }: {
-  onSelectProduct: (ean: string) => void;
+  onSelectProduct?: (ean: string) => void;
 }): JSX.Element {
   const filter = useAppStore((state) => state.filter);
   const onlyInStock = useAppStore((state) => state.onlyInStock);
@@ -108,7 +109,11 @@ export function ProductListPanel({
                   type="button"
                   className={`product-item${outOfStockClass}${verificationClass}${differenceClass}`}
                   data-ean={product.ean}
-                  onClick={() => onSelectProduct(product.ean)}
+                  onClick={() => {
+                    if (onSelectProduct) {
+                      onSelectProduct(product.ean);
+                    }
+                  }}
                   aria-label={`Wybierz produkt ${product.tytuł}, EAN ${product.ean}`}
                 >
                   <div className="product-item-main">
@@ -134,7 +139,13 @@ export function ProductListPanel({
         </div>
 
         <p className="hint" style={{ marginTop: ".75rem" }}>
-          Filtrowanie działa po nazwie i EAN. Dane źródłowe oraz stany bazowe pochodzą z legacy HTML.
+          {onSelectProduct
+            ? "Kliknij produkt, aby sprawdzić go w skanerze."
+            : (
+              <>
+                Przejdź do <Link to="/sprzedaz/skanuj">Skanuj grę</Link>, aby szybko sprawdzić wybrany EAN.
+              </>
+            )}
         </p>
       </div>
     </section>

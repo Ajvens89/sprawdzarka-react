@@ -1,0 +1,494 @@
+.page-header {
+  margin-bottom: 1rem;
+}
+
+.page-header__label {
+  display: block;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.page-header__title {
+  margin-top: 0.25rem;
+  font-size: 1.45rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.page-header__desc {
+  margin-top: 0.35rem;
+  color: var(--text2);
+  font-size: 0.9rem;
+  max-width: 720px;
+}
+
+.module-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding-bottom: 1rem;
+}
+
+.module-page__hint {
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.module-page__hint a {
+  color: var(--blue);
+}
+
+.step-guide {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.step-guide__item {
+  display: flex;
+  gap: 0.85rem;
+  align-items: flex-start;
+}
+
+.step-guide__num {
+  flex: 0 0 auto;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 999px;
+  background: var(--blue-muted);
+  color: var(--blue);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.step-guide__body p {
+  margin-top: 0.25rem;
+  color: var(--text2);
+  font-size: 0.86rem;
+}
+
+.step-guide__action {
+  margin-top: 0.5rem;
+}
+
+.step-guide__help {
+  margin-top: 0.35rem;
+}
+
+.step-guide__help-toggle {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--blue);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.step-guide__help-text {
+  margin-top: 0.35rem;
+  padding: 0.55rem 0.65rem;
+  border-radius: var(--radius-sm);
+  background: var(--surface2);
+  color: var(--text2);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.report-hub-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.85rem;
+}
+
+.report-hub-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding: 1rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+  text-decoration: none;
+  color: inherit;
+  min-height: 120px;
+}
+
+.report-hub-card:hover {
+  border-color: var(--blue);
+  box-shadow: var(--shadow-elevated);
+}
+
+.report-hub-card__title {
+  font-weight: 700;
+}
+
+.report-hub-card__desc {
+  color: var(--text2);
+  font-size: 0.84rem;
+}
+
+.settings-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.settings-section__title {
+  font-size: 1rem;
+}
+
+.settings-section__text {
+  color: var(--text2);
+  font-size: 0.88rem;
+}
+
+.settings-sync-row {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.settings-muted {
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.settings-file-btn {
+  position: relative;
+  cursor: pointer;
+}
+
+.settings-file-btn input {
+  display: none;
+}
+
+.settings-banner {
+  margin: 0;
+}
+
+.settings-section--technical {
+  border-style: dashed;
+}
+
+.price-advisor--embedded .price-advisor-tools {
+  margin-top: 0;
+}
+
+.scanner-page__layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(260px, 0.8fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.scanner-page__aside {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.scanner-quick-links {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.recent-scan-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.recent-scan-list__btn {
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface2);
+  padding: 0.55rem 0.65rem;
+  cursor: pointer;
+  color: inherit;
+}
+
+.recent-scan-list__btn span {
+  display: block;
+}
+
+.recent-scan-list__btn .mono {
+  margin-top: 0.15rem;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+}
+
+.panel-inventory--standalone {
+  width: 100%;
+}
+
+@media (max-width: 960px) {
+  .scanner-page__layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* UI kit — status pills, tables, modal body */
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.status-pill--ok {
+  background: rgba(21, 128, 61, 0.12);
+  color: var(--success);
+}
+
+.status-pill--warning {
+  background: rgba(180, 83, 9, 0.12);
+  color: var(--warning);
+}
+
+.status-pill--error {
+  background: rgba(185, 28, 28, 0.12);
+  color: var(--error);
+}
+
+.status-pill--muted {
+  background: var(--surface2);
+  color: var(--muted);
+}
+
+.status-pill--hint {
+  cursor: help;
+}
+
+.status-pill__info {
+  margin-left: 0.25rem;
+  font-size: 0.72rem;
+  opacity: 0.85;
+}
+
+.data-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.data-table th,
+.data-table td {
+  padding: 0.55rem 0.65rem;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.data-table th {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: var(--surface2);
+}
+
+.data-table tbody tr:hover td {
+  background: var(--hover-soft);
+}
+
+.data-table__sticky {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--surface);
+  min-width: 160px;
+  max-width: 240px;
+}
+
+.data-table thead .data-table__sticky {
+  background: var(--surface2);
+}
+
+.ui-modal-body {
+  padding: 1rem 1.5rem 1.5rem;
+  overflow-y: auto;
+}
+
+.price-detail-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.price-detail-modal__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem 1rem;
+  align-items: center;
+  color: var(--text2);
+  font-size: 0.86rem;
+}
+
+.price-detail-modal__links {
+  flex-wrap: wrap;
+}
+
+.price-advisor-list--compact {
+  padding: 0;
+  overflow: hidden;
+}
+
+[data-theme="light"] .btn-search,
+:root:not([data-theme="dark"]) .btn-search {
+  background: var(--blue);
+  color: #fff;
+}
+
+[data-theme="light"] .btn-search:hover,
+:root:not([data-theme="dark"]) .btn-search:hover {
+  background: var(--blue-hover);
+}
+
+[data-theme="light"] .panel,
+:root:not([data-theme="dark"]) .panel {
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+}
+
+.ui-empty-state {
+  padding: 1.5rem;
+  text-align: center;
+  color: var(--text2);
+}
+
+.ui-empty-state p {
+  margin-top: 0.35rem;
+  font-size: 0.86rem;
+}
+
+.not-found-page .settings-actions {
+  margin-top: 0.5rem;
+}
+
+/* Jasny motyw — nadpisania najczęstszych reguł z global.css */
+[data-theme="light"] .report-table tbody tr:nth-child(even) td,
+:root:not([data-theme="dark"]) .report-table tbody tr:nth-child(even) td {
+  background: rgba(15, 23, 42, 0.03);
+}
+
+[data-theme="light"] .report-table tr:hover td,
+:root:not([data-theme="dark"]) .report-table tr:hover td {
+  background: rgba(15, 23, 42, 0.05) !important;
+}
+
+[data-theme="light"] .data-table tbody tr:hover td,
+:root:not([data-theme="dark"]) .data-table tbody tr:hover td {
+  background: var(--hover-soft);
+}
+
+[data-theme="light"] .report-modal,
+:root:not([data-theme="dark"]) .report-modal {
+  background: rgba(15, 23, 42, 0.45);
+}
+
+[data-theme="light"] .btn-mini,
+:root:not([data-theme="dark"]) .btn-mini {
+  background: var(--surface2);
+  color: var(--text2);
+}
+
+[data-theme="light"] .btn-mini:hover,
+:root:not([data-theme="dark"]) .btn-mini:hover {
+  background: var(--blue-muted);
+  color: var(--blue);
+  border-color: var(--blue);
+}
+
+[data-theme="light"] .panel-scan,
+[data-theme="light"] .result-card,
+:root:not([data-theme="dark"]) .panel-scan,
+:root:not([data-theme="dark"]) .result-card {
+  box-shadow: var(--shadow-card);
+}
+
+/* Jasny motyw — statusy i pill (global.css ma kolory pod dark) */
+[data-theme="light"] .admin-status--profit,
+[data-theme="light"] .admin-status--market-ok,
+:root:not([data-theme="dark"]) .admin-status--profit,
+:root:not([data-theme="dark"]) .admin-status--market-ok {
+  color: var(--success);
+}
+
+[data-theme="light"] .admin-status--loss,
+[data-theme="light"] .admin-status--market-too-high,
+:root:not([data-theme="dark"]) .admin-status--loss,
+:root:not([data-theme="dark"]) .admin-status--market-too-high {
+  color: var(--error);
+}
+
+[data-theme="light"] .admin-status--break-even,
+:root:not([data-theme="dark"]) .admin-status--break-even {
+  color: var(--warning);
+}
+
+[data-theme="light"] .admin-status--market-low,
+:root:not([data-theme="dark"]) .admin-status--market-low {
+  color: var(--blue);
+}
+
+[data-theme="light"] .client-export-sheet-pill--deduction,
+:root:not([data-theme="dark"]) .client-export-sheet-pill--deduction {
+  color: var(--error);
+}
+
+[data-theme="light"] .client-export-sheet-pill--remaining,
+:root:not([data-theme="dark"]) .client-export-sheet-pill--remaining {
+  color: var(--success);
+}
+
+[data-theme="light"] .inventory-status:not(.success):not(.error):not(.info),
+:root:not([data-theme="dark"]) .inventory-status:not(.success):not(.error):not(.info) {
+  background: var(--inventory-status-bg);
+  color: var(--text2);
+}
+
+[data-theme="light"] .bistro-kpi,
+[data-theme="light"] .report-kpi,
+:root:not([data-theme="dark"]) .bistro-kpi,
+:root:not([data-theme="dark"]) .report-kpi {
+  box-shadow: var(--shadow-card);
+}
+

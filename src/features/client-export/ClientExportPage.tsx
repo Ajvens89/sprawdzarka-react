@@ -12,6 +12,7 @@ import { formatMoney, normalizeText, todayStr, uid } from "../../lib/utils";
 import { useAppStore } from "../../store/useAppStore";
 import { useClientExportStore } from "../../store/useClientExportStore";
 import type { Product } from "../../types/app";
+import { PageHeader } from "../../components/ui/PageHeader";
 
 type EditableLine = ClientGameLine & { id: string };
 type ListKind = "deduction" | "remaining";
@@ -424,10 +425,16 @@ export function ClientExportPage(): JSX.Element {
   }
 
   return (
-    <div className="client-export-page">
+    <div className="client-export-page module-page">
+      <PageHeader
+        label="Raporty"
+        title="Raport dla klienta"
+        description="Przygotuj plik gry.xlsx — podsumowanie, do skasowania i zostało."
+      />
+
       <section className="client-export-hero panel">
         <div className="client-export-hero-copy">
-          <span className="client-export-badge">Eksport klienta</span>
+          <span className="client-export-badge">Raport klienta</span>
           <h2 className="client-export-title">Excel ze stanami gier</h2>
           <p className="client-export-lead">
             Przygotuj rozliczenie w formacie <strong>gry.xlsx</strong> — trzy arkusze, sumy i kontrola różnicy.

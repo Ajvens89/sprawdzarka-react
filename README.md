@@ -15,6 +15,7 @@ Ten starter zachowuje:
 ```bash
 npm install
 npm run dev
+npm run test
 ```
 
 ## Firebase
@@ -24,6 +25,8 @@ npm run dev
 3. Uruchom aplikację ponownie
 
 Jeśli `.env` nie jest skonfigurowane, aplikacja działa lokalnie bez logowania.
+
+Opcjonalnie ustaw `VITE_FIREBASE_ALLOWED_EMAIL_SUFFIX` (np. `@twojadomena.pl`), aby ograniczyć logowanie do kont zespołu. Reguły bazy wymagają też `email_verified` — użytkownicy muszą potwierdzić e-mail w Firebase Auth.
 
 ### Wdrożenie na Firebase Hosting
 
@@ -75,6 +78,21 @@ Bez tego pojawia się błąd `auth/requests-from-referer-blocked`.
 - pełne mapowanie importu PDF z backendem `/api/parse-invoice`,
 - import nowych produktów / nadpisywanie cen z modułu gier,
 - 1:1 przeniesienie wszystkich widoków raportowych z legacy.
+
+## Mapa modułów (nawigacja)
+
+Aplikacja ma **4 moduły** z podstronami. Stare adresy URL przekierowują automatycznie.
+
+| Moduł | Trasy | Opis |
+|-------|-------|------|
+| **Sprzedaż** | `/sprzedaz/skanuj`, `/sprzedaz/produkty`, `/sprzedaz/inwentaryzacja`, `/sprzedaz/bistro`, `/sprzedaz/kasa`, `/sprzedaz/wydawanie` | **Gry:** skan EAN, katalog, inwentaryzacja · **Bistro:** panel, kasa, wydawanie |
+| **Ceny i marże** | `/ceny/rynek`, `/ceny/koszty`, `/ceny/import` | Porównanie cen online, koszty/marża, import Excel/inFakt |
+| **Raporty** | `/raporty`, `/raporty/klient`, `/raporty/inwentaryzacja` | Hub eksportów, raport klienta, Excel inwentaryzacji |
+| **Ustawienia** | `/ustawienia` | Logowanie, kopia JSON, tryb ciemny, narzędzia techniczne |
+
+**Redirecty ze starych zakładek:** `/scanner` i `/magazyn/*` → sprzedaż (gry), `/bistro` → bistro, `/orders` → kasa, `/orders-display` → wydawanie, `/prices` → ceny rynkowe, `/admin` → koszty, `/client-export` → raport klienta.
+
+**Motyw:** domyślnie jasny; tryb ciemny w Ustawieniach (zapis w `localStorage`).
 
 ## Struktura
 

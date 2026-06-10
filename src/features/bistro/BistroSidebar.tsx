@@ -1,10 +1,11 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { xlsxDownload } from "../../lib/export";
 import { formatMoney } from "../../lib/utils";
 import { useAppStore } from "../../store/useAppStore";
 import { bistroCalcProduct } from "../../lib/bistro";
 
-export function BistroSidebar(): JSX.Element {
+export function BistroSidebar({ showTechnicalActions = false }: { showTechnicalActions?: boolean }): JSX.Element {
   const [newName, setNewName] = useState("");
 
   const products = useAppStore((state) => state.bistroProducts);
@@ -104,15 +105,21 @@ export function BistroSidebar(): JSX.Element {
         <button className="btn-search" type="button" onClick={handleAdd}>Dodaj</button>
       </div>
 
+      {showTechnicalActions ? (
       <div className="bistro-toolbar" style={{ marginTop: ".75rem" }}>
         <button className="btn-ghost" type="button" onClick={handleExport}>Eksport XLSX</button>
         <button className="btn-ghost btn-ghost--danger" type="button" onClick={handleReset}>
           Reset sprzedaży
         </button>
       </div>
+      ) : (
+        <p className="hint" style={{ marginTop: ".75rem" }}>
+          Eksport i reset sprzedaży znajdziesz w <Link to="/ustawienia">Ustawieniach</Link> (narzędzia techniczne) lub w Raportach.
+        </p>
+      )}
 
       <p className="hint" style={{ marginTop: ".6rem" }}>
-        Dodane produkty zostają na liście. Reset zeruje tylko sprzedaż i zakupy. Po zalogowaniu dane synchronizują się z Firebase.
+        Dodane produkty zostają na liście. Po zalogowaniu dane synchronizują się z Firebase.
       </p>
     </section>
   );

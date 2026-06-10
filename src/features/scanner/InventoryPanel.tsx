@@ -9,7 +9,7 @@ import {
 import { normalizeEAN } from "../../lib/utils";
 import { useAppStore } from "../../store/useAppStore";
 
-export function InventoryPanel(): JSX.Element {
+export function InventoryPanel({ standalone = false }: { standalone?: boolean }): JSX.Element {
   const [scanInput, setScanInput] = useState("");
   const [status, setStatus] = useState<{ type: "info" | "success" | "error"; message: string } | null>(null);
   const [isReportOpen, setIsReportOpen] = useState(false);
@@ -113,7 +113,7 @@ export function InventoryPanel(): JSX.Element {
   }
 
   return (
-    <aside className="panel panel-inventory">
+    <section className={`panel panel-inventory${standalone ? " panel-inventory--standalone" : ""}`}>
       <span className="panel-label">Weryfikacja stanów</span>
 
       <div className="input-row" style={{ marginBottom: ".6rem" }}>
@@ -147,9 +147,11 @@ export function InventoryPanel(): JSX.Element {
         </button>
         <button className="btn-ghost" type="button" onClick={() => setIsReportOpen(true)}>Raport</button>
         <button className="btn-ghost" type="button" onClick={handleExport}>Eksport XLSX</button>
-        <button className="btn-ghost btn-ghost--danger" type="button" onClick={handleResetInventory}>
-          Reset
-        </button>
+        {!standalone ? (
+          <button className="btn-ghost btn-ghost--danger" type="button" onClick={handleResetInventory}>
+            Reset
+          </button>
+        ) : null}
       </div>
 
       <div
@@ -296,6 +298,6 @@ export function InventoryPanel(): JSX.Element {
           </div>
         </div>
       ) : null}
-    </aside>
+    </section>
   );
 }

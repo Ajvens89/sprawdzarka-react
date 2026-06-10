@@ -50,7 +50,7 @@ export function ResultCard({
     return (
       <div className="result-card not-found" style={{ display: "block" }}>
         <div className="result-label">{result.title}</div>
-        <div className="not-found-msg" dangerouslySetInnerHTML={{ __html: result.message }} />
+        <div className="not-found-msg">{result.message}</div>
       </div>
     );
   }
@@ -87,7 +87,8 @@ export function ResultCard({
       const result = await fetchOnlinePrice({
         ean: product.ean,
         title,
-        currentPrice: product.cena
+        currentPrice: product.cena,
+        force: true
       });
 
       setMarketPrice(result.price);
@@ -162,8 +163,11 @@ export function ResultCard({
 
         {priceCheckMessage ? <span className="price-check-note">{priceCheckMessage}</span> : null}
 
-        <Link className="btn-ghost result-price-check-link" to="/prices">
-          Pełna lista cen →
+        <Link className="btn-ghost result-price-check-link" to="/ceny/rynek">
+          Ceny rynkowe →
+        </Link>
+        <Link className="btn-ghost result-price-check-link" to="/ceny/koszty">
+          Koszty i marże →
         </Link>
       </div>
 

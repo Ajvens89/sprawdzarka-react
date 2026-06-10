@@ -1,15 +1,14 @@
-import { type ChangeEvent, useMemo, useRef, useState } from "react";
+import { Fragment, type ChangeEvent, useMemo, useState } from "react";
 import { xlsxDownload } from "../../lib/export";
 import { parsePurchaseCostsWorkbook } from "../../lib/importPurchaseCosts";
 import { LEGACY_PRODUCTS, getResolvedProducts, getResolvedStock } from "../../lib/scanner";
-import { fetchOnlinePrice } from "../../lib/priceCheck";
+import { DEFAULT_PRICE_CACHE_HOURS } from "../../lib/priceCheckCache";
 import {
   DEFAULT_BELOW_MARKET,
   DEFAULT_MAX_ABOVE_MARKET,
   evaluateMarketPrice,
   marketPriceStatusLabel,
-  parseMarketPriceString,
-  sleep
+  parseMarketPriceString
 } from "../../lib/marketPriceCompare";
 import { calcPurchaseNetFromGross, calcRetailMargin, retailSummaryCalc } from "../../lib/retail";
 import { downloadJson, formatMoney, normalizeText, readJsonFile } from "../../lib/utils";
@@ -17,7 +16,10 @@ import { useAppStore } from "../../store/useAppStore";
 import type { CostMap, Product, VatMap } from "../../types/app";
 import { useAuth } from "../auth/AuthProvider";
 import { AdminSellingPriceInput } from "./AdminSellingPriceInput";
+import { Link } from "react-router-dom";
 import { InfaktImportPanel } from "./InfaktImportPanel";
+import { StepGuide } from "../../components/ui/StepGuide";
+import { useMarketPriceBatch } from "../pricing/hooks/useMarketPriceBatch";
 
 type MarginFilter = "all" | "with-cost" | "profit" | "loss" | "missing-cost";
 
@@ -43,18 +45,15 @@ function marginLabel(status: ReturnType<typeof calcRetailMargin>["status"]): str
   return "Brak kosztu";
 }
 
-export function AdminPage(): JSX.Element {
+export function AdminPage({ view = "full" }: { view?: "costs" | "import" | "full" }): JSX.Element {
   const { isFirebaseEnabled, user } = useAuth();
   const [filter, setFilter] = useState("");
   const [marginFilter, setMarginFilter] = useState<MarginFilter>("all");
   const [onlyInStock, setOnlyInStock] = useState(false);
-  const [compareProgress, setCompareProgress] = useState<{ done: number; total: number } | null>(null);
-  const [compareStatus, setCompareStatus] = useState<{ type: "info" | "success" | "error"; message: string } | null>(
-    null
-  );
+  const [retailConsole, setRetailConsole] = useState(true);
+  const [expandedEan, setExpandedEan] = useState<string | null>(null);
   const [maxAboveMarket, setMaxAboveMarket] = useState(DEFAULT_MAX_ABOVE_MARKET);
   const [belowMarket, setBelowMarket] = useState(DEFAULT_BELOW_MARKET);
-  const compareCancelRef = useRef(false);
 
   const stockOverrides = useAppStore((state) => state.stockOverrides);
   const priceOverrides = useAppStore((state) => state.priceOverrides);
@@ -73,6 +72,18 @@ export function AdminPage(): JSX.Element {
     () => products.filter((product) => (stock[product.ean] ?? 0) > 0),
     [products, stock]
   );
+
+  const {
+    compareProgress,
+    compareStatus,
+    setCompareStatus,
+    skipFreshPrices,
+    setSkipFreshPrices,
+    forceRefreshPrices,
+    setForceRefreshPrices,
+    compareInStockPrices,
+    cancelCompareInStockPrices
+  } = useMarketPriceBatch(inStockProducts);
 
   const rows = useMemo(() => {
     const query = normalizeText(filter);
@@ -131,87 +142,6 @@ export function AdminPage(): JSX.Element {
       ),
     [rows]
   );
-
-  async function compareInStockPrices(): Promise<void> {
-    if (inStockProducts.length === 0) {
-      setCompareStatus({ type: "error", message: "Brak produktów ze stanem większym niż 0." });
-      return;
-    }
-
-    if (
-      !window.confirm(
-        `Porównam ceny online dla ${inStockProducts.length} produktów ze stanem > 0. Operacja może potrwać kilka minut. Kontynuować?`
-      )
-    ) {
-      return;
-    }
-
-    setCompareStatus(null);
-    setCompareProgress({ done: 0, total: inStockProducts.length });
-    compareCancelRef.current = false;
-
-    let checked = 0;
-    let found = 0;
-    let errors = 0;
-
-    for (let index = 0; index < inStockProducts.length; index += 1) {
-      if (compareCancelRef.current) {
-        break;
-      }
-
-      const product = inStockProducts[index];
-      const previousEntry = useAppStore.getState().priceEntries[product.ean];
-
-      try {
-        const result = await fetchOnlinePrice({
-          ean: product.ean,
-          title: productTitle(product),
-          currentPrice: product.cena
-        });
-
-        if (result.price) {
-          found += 1;
-        } else {
-          errors += 1;
-        }
-
-        setPriceEntry(product.ean, {
-          marketPrice: result.price ? result.price.toFixed(2).replace(".", ",") : previousEntry?.marketPrice ?? "",
-          source: result.source || previousEntry?.source || "",
-          checkedAt: new Date().toLocaleString("pl-PL"),
-          status: result.message
-        });
-      } catch {
-        errors += 1;
-        setPriceEntry(product.ean, {
-          marketPrice: previousEntry?.marketPrice ?? "",
-          source: previousEntry?.source ?? "",
-          checkedAt: new Date().toLocaleString("pl-PL"),
-          status: "Błąd połączenia ze sprawdzaniem cen online."
-        });
-      }
-
-      checked += 1;
-      setCompareProgress({ done: checked, total: inStockProducts.length });
-
-      if (index < inStockProducts.length - 1 && !compareCancelRef.current) {
-        await sleep(900);
-      }
-    }
-
-    setCompareProgress(null);
-    const wasCancelled = compareCancelRef.current;
-    setCompareStatus({
-      type: wasCancelled ? "info" : "success",
-      message: wasCancelled
-        ? `Przerwano po ${checked} z ${inStockProducts.length} produktów. Znaleziono ceny: ${found}, błędy/brak ceny: ${errors}.`
-        : `Sprawdzono ${checked} produktów ze stanem. Znaleziono ceny online dla ${found} pozycji, błędy/brak ceny: ${errors}. Możesz poprawić wartości ręcznie w tabeli.`
-    });
-  }
-
-  function cancelCompareInStockPrices(): void {
-    compareCancelRef.current = true;
-  }
 
   function applySuggestedSellingPrices(): void {
     const changes = Object.fromEntries(
@@ -373,8 +303,14 @@ export function AdminPage(): JSX.Element {
     }
   }
 
+  const showCostsTable = view === "costs" || view === "full";
+  const showImportSection = view === "import" || view === "full";
+  const showCompareTools = view === "costs" || view === "full";
+  const showFullHeader = view === "full";
+
   return (
     <div className="admin-page">
+      {showFullHeader ? (
       <section className="price-advisor-header">
         <div>
           <span className="panel-label">Administracja</span>
@@ -405,11 +341,12 @@ export function AdminPage(): JSX.Element {
           </div>
         </div>
       </section>
+      ) : null}
 
-      {isFirebaseEnabled && !user ? (
+      {showFullHeader && isFirebaseEnabled && !user ? (
         <div className="banner banner-warning" style={{ marginBottom: "1rem" }} role="status">
           <strong>Brak synchronizacji</strong> — koszty zakupu z komputera nie trafią na telefon, dopóki nie
-          klikniesz <strong>Zaloguj</strong> w górnym pasku (ten sam login co na PC).
+          klikniesz <strong>Zaloguj</strong> w Ustawieniach (ten sam login co na PC).
         </div>
       ) : null}
 
@@ -420,6 +357,8 @@ export function AdminPage(): JSX.Element {
         </div>
       ) : null}
 
+      {showCostsTable ? (
+      <>
       <div className="bistro-summary admin-kpi-row">
         <div className="bistro-kpi margin">
           <div className="bistro-kpi-label">Srednia marza</div>
@@ -429,60 +368,112 @@ export function AdminPage(): JSX.Element {
         </div>
       </div>
 
-      <section className="panel price-advisor-tools">
-        <div className="search-input-wrap">
-          <span className="search-icon" aria-hidden="true">&#9906;</span>
-          <input
-            value={filter}
-            onChange={(event) => setFilter(event.target.value)}
-            placeholder="Szukaj produktu lub EAN..."
-          />
+      <section className="panel price-advisor-tools admin-tools">
+        <div className="admin-tools-row">
+          <div className="search-input-wrap">
+            <span className="search-icon" aria-hidden="true">&#9906;</span>
+            <input
+              value={filter}
+              onChange={(event) => setFilter(event.target.value)}
+              placeholder="Szukaj produktu lub EAN..."
+            />
+          </div>
+
+          <button
+            className={`btn-toggle${onlyInStock ? " active" : ""}`}
+            type="button"
+            onClick={() => setOnlyInStock((current) => !current)}
+            aria-pressed={onlyInStock}
+          >
+            Tylko ze stanem
+          </button>
+
+          {view === "costs" ? (
+            <button
+              className={`btn-toggle${retailConsole ? " active" : ""}`}
+              type="button"
+              aria-pressed={retailConsole}
+              onClick={() => {
+                setRetailConsole((current) => !current);
+                setExpandedEan(null);
+              }}
+            >
+              Konsola handlowa
+            </button>
+          ) : null}
+
+          <label className="price-advisor-setting price-advisor-setting--select">
+            <span>Filtr marzy</span>
+            <select value={marginFilter} onChange={(event) => setMarginFilter(event.target.value as MarginFilter)}>
+              <option value="all">Wszystkie</option>
+              <option value="with-cost">Tylko z kosztem</option>
+              <option value="profit">Zarabiam</option>
+              <option value="loss">Tracisz</option>
+              <option value="missing-cost">Brak kosztu</option>
+            </select>
+          </label>
         </div>
 
-        <button
-          className={`btn-toggle${onlyInStock ? " active" : ""}`}
-          type="button"
-          onClick={() => setOnlyInStock((current) => !current)}
-          aria-pressed={onlyInStock}
-        >
-          Tylko ze stanem
-        </button>
+        <div className="admin-tools-row admin-tools-row--market">
+          <label className="price-advisor-setting">
+            <span>Powyzej rynku</span>
+            <input
+              type="number"
+              min={0}
+              max={50}
+              value={maxAboveMarket}
+              onChange={(event) => setMaxAboveMarket(Math.max(0, Number(event.target.value) || 0))}
+            />
+            <span>%</span>
+          </label>
 
-        <label className="price-advisor-setting">
-          <span>Filtr marzy</span>
-          <select value={marginFilter} onChange={(event) => setMarginFilter(event.target.value as MarginFilter)}>
-            <option value="all">Wszystkie</option>
-            <option value="with-cost">Tylko z kosztem</option>
-            <option value="profit">Zarabiam</option>
-            <option value="loss">Tracisz</option>
-            <option value="missing-cost">Brak kosztu</option>
-          </select>
-        </label>
+          <label className="price-advisor-setting">
+            <span>Ponizej rynku</span>
+            <input
+              type="number"
+              min={0}
+              max={50}
+              value={belowMarket}
+              onChange={(event) => setBelowMarket(Math.max(0, Number(event.target.value) || 0))}
+            />
+            <span>%</span>
+          </label>
 
-        <label className="price-advisor-setting">
-          <span>Maks. powyzej rynku</span>
-          <input
-            type="number"
-            min={0}
-            max={50}
-            value={maxAboveMarket}
-            onChange={(event) => setMaxAboveMarket(Math.max(0, Number(event.target.value) || 0))}
-          />
-          <span>%</span>
-        </label>
+          {showCompareTools ? (
+            <>
+              <button
+                className={`btn-toggle${skipFreshPrices ? " active" : ""}`}
+                type="button"
+                aria-pressed={skipFreshPrices}
+                disabled={forceRefreshPrices}
+                onClick={() => setSkipFreshPrices((current) => !current)}
+                title={`Nie odpytuj ponownie produktów ze świeżą ceną online (młodszą niż ${DEFAULT_PRICE_CACHE_HOURS} h)`}
+              >
+                Pomiń świeże ({DEFAULT_PRICE_CACHE_HOURS}h)
+              </button>
 
-        <label className="price-advisor-setting">
-          <span>Maks. ponizej rynku</span>
-          <input
-            type="number"
-            min={0}
-            max={50}
-            value={belowMarket}
-            onChange={(event) => setBelowMarket(Math.max(0, Number(event.target.value) || 0))}
-          />
-          <span>%</span>
-        </label>
+              <button
+                className={`btn-toggle${forceRefreshPrices ? " active" : ""}`}
+                type="button"
+                aria-pressed={forceRefreshPrices}
+                onClick={() => {
+                  setForceRefreshPrices((current) => {
+                    const next = !current;
+                    if (next) {
+                      setSkipFreshPrices(false);
+                    }
+                    return next;
+                  });
+                }}
+                title="Wymuś ponowne sprawdzenie wszystkich produktów (większe zużycie API)"
+              >
+                Wymuś odświeżenie
+              </button>
+            </>
+          ) : null}
+        </div>
 
+        {showCompareTools ? (
         <div className="price-actions-group price-actions-group--primary">
           <button
             className="btn-search"
@@ -510,59 +501,66 @@ export function AdminPage(): JSX.Element {
             Podstaw sugerowane ceny ({suggestedSellingChanges.length})
           </button>
         </div>
+        ) : null}
 
         <div className="price-actions-group">
-          <button className="btn-ghost" type="button" onClick={exportTemplate}>
-            Szablon Excel
-          </button>
+          {view !== "costs" ? (
+            <button className="btn-ghost" type="button" onClick={exportTemplate}>
+              Szablon Excel
+            </button>
+          ) : null}
           <button className="btn-ghost" type="button" onClick={exportExcel}>
             Eksport Excel
           </button>
           <button className="btn-ghost" type="button" onClick={exportJson}>
             Eksport JSON
           </button>
-          <label className="btn-ghost price-import-button">
-            Import Excel
-            <input type="file" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={(event) => void importExcel(event)} />
-          </label>
-          <label className="btn-ghost price-import-button">
-            Import JSON
-            <input type="file" accept="application/json,.json" onChange={(event) => void importJson(event)} />
-          </label>
+          {view !== "costs" ? (
+            <>
+              <label className="btn-ghost price-import-button">
+                Import Excel
+                <input type="file" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={(event) => void importExcel(event)} />
+              </label>
+              <label className="btn-ghost price-import-button">
+                Import JSON
+                <input type="file" accept="application/json,.json" onChange={(event) => void importJson(event)} />
+              </label>
+            </>
+          ) : null}
         </div>
       </section>
 
-      {compareStatus ? (
+      {showCompareTools && compareStatus ? (
         <div className={`inventory-status ${compareStatus.type}`} style={{ display: "block" }} role="status">
           {compareStatus.message}
         </div>
       ) : null}
 
-      <InfaktImportPanel />
-
-      <section className="panel admin-table-wrap">
+      <section className={`panel admin-table-wrap${retailConsole && view === "costs" ? " admin-table-wrap--console" : ""}`}>
         <div className="report-table-wrap">
           <table className="report-table admin-table">
             <thead>
               <tr>
-                <th>Produkt</th>
-                <th>EAN</th>
+                <th className="admin-table__sticky">Produkt</th>
+                <th className="admin-table__sticky mono">EAN</th>
                 <th className="num">Stan</th>
-                <th className="num">Sprzedaz brutto</th>
-                <th className="num">Cena online</th>
-                <th>Rynek</th>
-                <th className="num">VAT</th>
+                <th className="num">Sprzedaż brutto</th>
+                <th className={`num admin-col--extended${retailConsole && view === "costs" ? " is-hidden" : ""}`}>Cena online</th>
+                <th className={`admin-col--extended${retailConsole && view === "costs" ? " is-hidden" : ""}`}>Rynek</th>
+                <th className={`num admin-col--extended${retailConsole && view === "costs" ? " is-hidden" : ""}`}>VAT</th>
                 <th className="num">Zakup brutto</th>
-                <th className="num">Marza brutto</th>
-                <th className="num">Marza %</th>
-                <th>Marza</th>
+                <th className="num">Marża brutto</th>
+                <th className={`num admin-col--extended${retailConsole && view === "costs" ? " is-hidden" : ""}`}>Marża %</th>
+                <th>Status</th>
+                {retailConsole && view === "costs" ? <th aria-label="Szczegóły" /> : null}
               </tr>
             </thead>
             <tbody>
               {rows.map(({ product, purchaseCost, vatPercent, stockQty, margin, entry, marketPrice, market }) => (
-                <tr key={product.ean} className={`admin-row admin-row--${margin.status}`}>
-                  <td>{productTitle(product)}</td>
-                  <td className="mono">{product.ean}</td>
+                <Fragment key={product.ean}>
+                <tr className={`admin-row admin-row--${margin.status}`}>
+                  <td className="admin-table__sticky">{productTitle(product)}</td>
+                  <td className="admin-table__sticky mono">{product.ean}</td>
                   <td className="num">{stockQty > 0 ? stockQty : "—"}</td>
                   <td className="num">
                     <AdminSellingPriceInput
@@ -573,7 +571,7 @@ export function AdminPage(): JSX.Element {
                       onClearOverride={clearPriceOverride}
                     />
                   </td>
-                  <td className="num">
+                  <td className={`num admin-col--extended${retailConsole && view === "costs" ? " is-hidden" : ""}`}>
                     <input
                       className="admin-cost-input"
                       type="text"
@@ -594,12 +592,12 @@ export function AdminPage(): JSX.Element {
                       <span className="admin-inline-note">→ {formatMoney(market.suggestedPrice)}</span>
                     ) : null}
                   </td>
-                  <td>
+                  <td className={`admin-col--extended${retailConsole && view === "costs" ? " is-hidden" : ""}`}>
                     <span className={`admin-status admin-status--market-${market.status}`}>
                       {marketPriceStatusLabel(market.status)}
                     </span>
                   </td>
-                  <td className="num">{vatPercent != null ? `${vatPercent.toFixed(0)}%` : "—"}</td>
+                  <td className={`num admin-col--extended${retailConsole && view === "costs" ? " is-hidden" : ""}`}>{vatPercent != null ? `${vatPercent.toFixed(0)}%` : "—"}</td>
                   <td className="num">
                     <input
                       className="admin-cost-input"
@@ -623,18 +621,101 @@ export function AdminPage(): JSX.Element {
                     />
                   </td>
                   <td className="num">{margin.profit === null ? "—" : formatMoney(margin.profit)}</td>
-                  <td className="num">
+                  <td className={`num admin-col--extended${retailConsole && view === "costs" ? " is-hidden" : ""}`}>
                     {margin.marginPct === null ? "—" : `${margin.marginPct.toFixed(1).replace(".", ",")} %`}
                   </td>
                   <td>
                     <span className={`admin-status admin-status--${margin.status}`}>{marginLabel(margin.status)}</span>
                   </td>
+                  {retailConsole && view === "costs" ? (
+                    <td>
+                      <button
+                        className="btn-ghost"
+                        type="button"
+                        onClick={() => setExpandedEan((current) => (current === product.ean ? null : product.ean))}
+                      >
+                        {expandedEan === product.ean ? "Zwiń" : "Szczegóły"}
+                      </button>
+                    </td>
+                  ) : null}
                 </tr>
+                {retailConsole && view === "costs" && expandedEan === product.ean ? (
+                  <tr className="admin-row-details">
+                    <td colSpan={8}>
+                      <div className="admin-row-details__grid">
+                        <span>Cena online: {entry?.marketPrice || "—"}</span>
+                        <span>Rynek: {marketPriceStatusLabel(market.status)}</span>
+                        <span>VAT: {vatPercent != null ? `${vatPercent.toFixed(0)}%` : "—"}</span>
+                        <span>Marża %: {margin.marginPct === null ? "—" : `${margin.marginPct.toFixed(1).replace(".", ",")} %`}</span>
+                        {entry?.source ? <span>Źródło: {entry.source}</span> : null}
+                      </div>
+                    </td>
+                  </tr>
+                ) : null}
+                </Fragment>
               ))}
             </tbody>
           </table>
         </div>
       </section>
+      </>
+      ) : null}
+
+      {showImportSection ? (
+        <>
+          {view === "import" ? (
+            <section className="panel">
+              <StepGuide
+                steps={[
+                  {
+                    title: "Pobierz szablon Excel",
+                    description: "Plik z kolumnami EAN/ISBN, tytuł, cena zakupu netto, VAT.",
+                    help: "Przykładowy wiersz: EAN 5902983494492 · tytuł gry · cena netto 45,00 · VAT 23%. Zapisz jako .xlsx i załaduj w kroku 3.",
+                    action: (
+                      <button className="btn-ghost" type="button" onClick={exportTemplate}>
+                        Pobierz szablon
+                      </button>
+                    )
+                  },
+                  {
+                    title: "Wypełnij koszty zakupu",
+                    description: "Dla każdego EAN wpisz cenę netto i stawkę VAT z faktury.",
+                    help: "Netto to kwota z faktury przed VAT. VAT wpisz jako liczbę (np. 23). EAN musi być identyczny jak w bazie gier."
+                  },
+                  {
+                    title: "Załaduj plik lub inFakt",
+                    description: "Import Excel/JSON albo pobierz faktury z inFakt/KSeF poniżej.",
+                    help: "Excel: kolumny EAN, cena netto, VAT. JSON: plik wyeksportowany z tej aplikacji. inFakt/KSeF: ustaw daty i pobierz koszty automatycznie.",
+                    action: (
+                      <div className="settings-actions">
+                        <label className="btn-ghost price-import-button">
+                          Import Excel
+                          <input type="file" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={(event) => void importExcel(event)} />
+                        </label>
+                        <label className="btn-ghost price-import-button">
+                          Import JSON
+                          <input type="file" accept="application/json,.json" onChange={(event) => void importJson(event)} />
+                        </label>
+                      </div>
+                    )
+                  },
+                  {
+                    title: "Porównaj ceny ze stanem",
+                    description: "Po imporcie przejdź do tabeli kosztów i uruchom porównanie cen online.",
+                    help: "W „Koszty i marże” włącz „Konsola handlowa” na co dzień, a pełną tabelę zostaw do analizy cen rynkowych.",
+                    action: (
+                      <Link className="btn-search" to="/ceny/koszty">
+                        Otwórz koszty i marże
+                      </Link>
+                    )
+                  }
+                ]}
+              />
+            </section>
+          ) : null}
+          <InfaktImportPanel />
+        </>
+      ) : null}
     </div>
   );
 }

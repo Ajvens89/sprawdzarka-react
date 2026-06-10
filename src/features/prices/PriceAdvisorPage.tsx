@@ -1,10 +1,15 @@
 import { type ChangeEvent, useEffect, useMemo, useState } from "react";
+import { StatusPill } from "../../components/ui/StatusPill";
 import { LEGACY_PRODUCTS, getResolvedProducts, getResolvedStock } from "../../lib/scanner";
 import { xlsxDownload } from "../../lib/export";
 import { formatMoney, normalizeText } from "../../lib/utils";
 import { useAppStore } from "../../store/useAppStore";
 import type { PriceEntry } from "../../types/app";
 import { fetchOnlinePrice } from "../../lib/priceCheck";
+import { DEFAULT_PRICE_CACHE_HOURS, isPriceEntryFresh } from "../../lib/priceCheckCache";
+import { PriceDetailModal } from "../pricing/components/PriceDetailModal";
+import { useMarketPriceBatch } from "../pricing/hooks/useMarketPriceBatch";
+import { parsePrice, priceStatusLabel, productTitle, type PriceRowStatus } from "../pricing/pricingUtils";
 
 const STORAGE_KEY = "sprawdzarka-price-advisor-v1";
 const EXPORT_VERSION = 1;
@@ -48,32 +53,20 @@ function todayStamp(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-function parsePrice(value: string): number | null {
-  const normalized = value.replace(",", ".").replace(/[^\d.]/g, "");
-  const parsed = Number(normalized);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+function statusVariant(status: PriceRowStatus): "ok" | "warning" | "error" | "muted" {
+  if (status === "missing") return "muted";
+  if (status === "too-high") return "error";
+  if (status === "low") return "ok";
+  return "ok";
 }
 
-function productTitle(product: (typeof LEGACY_PRODUCTS)[number]): string {
-  const record = product as unknown as Record<string, unknown>;
-  const title = Object.entries(record).find(([key]) => key !== "ean" && key !== "cena")?.[1];
-  return String(title ?? "");
-}
-
-function searchUrl(product: (typeof LEGACY_PRODUCTS)[number], target: "google" | "ceneo" | "allegro"): string {
-  const titleQuery = encodeURIComponent(productTitle(product));
-  const fullQuery = encodeURIComponent(`${product.ean} ${productTitle(product)}`);
-  if (target === "google") return `https://www.google.pl/search?tbm=shop&q=${fullQuery}`;
-  if (target === "ceneo") return `https://www.ceneo.pl/;szukaj-${titleQuery}`;
-  return `https://allegro.pl/listing?string=${fullQuery}&description=1`;
-}
-
-export function PriceAdvisorPage(): JSX.Element {
+export function PriceAdvisorPage({ embedded = false }: { embedded?: boolean }): JSX.Element {
   const [filter, setFilter] = useState("");
   const [maxAboveMarket, setMaxAboveMarket] = useState(5);
   const [belowMarket, setBelowMarket] = useState(0);
   const [verifying, setVerifying] = useState<Record<string, boolean>>({});
   const [onlyInStock, setOnlyInStock] = useState(false);
+  const [detailEan, setDetailEan] = useState<string | null>(null);
   const stockOverrides = useAppStore((state) => state.stockOverrides);
   const priceOverrides = useAppStore((state) => state.priceOverrides);
   const entries = useAppStore((state) => state.priceEntries);
@@ -105,14 +98,20 @@ export function PriceAdvisorPage(): JSX.Element {
     setPriceEntry(ean, nextEntry);
   }
 
-  async function verifyProduct(product: (typeof LEGACY_PRODUCTS)[number]): Promise<void> {
+  async function verifyProduct(product: (typeof LEGACY_PRODUCTS)[number], options?: { force?: boolean }): Promise<void> {
+    const existingEntry = useAppStore.getState().priceEntries[product.ean];
+    if (!options?.force && isPriceEntryFresh(existingEntry, DEFAULT_PRICE_CACHE_HOURS)) {
+      return;
+    }
+
     setVerifying((state) => ({ ...state, [product.ean]: true }));
 
     try {
       const result = await fetchOnlinePrice({
         ean: product.ean,
         title: productTitle(product),
-        currentPrice: product.cena
+        currentPrice: product.cena,
+        force: options?.force
       });
 
       updateEntry(product.ean, {
@@ -148,7 +147,7 @@ export function PriceAdvisorPage(): JSX.Element {
         const priceLimit = priceTarget ? priceTarget * (1 + maxAboveMarket / 100) : null;
         const suggestedPrice = priceLimit && product.cena > priceLimit ? Number(priceLimit.toFixed(2)) : product.cena;
         const difference = marketPrice ? product.cena - marketPrice : null;
-        const status =
+        const status: PriceRowStatus =
           !marketPrice ? "missing" : product.cena > suggestedPrice ? "too-high" : priceTarget && product.cena < priceTarget * 0.9 ? "low" : "ok";
 
         return {
@@ -164,11 +163,21 @@ export function PriceAdvisorPage(): JSX.Element {
       });
   }, [belowMarket, entries, filter, maxAboveMarket, onlyInStock, products, stock]);
 
-  async function verifyVisible(): Promise<void> {
-    for (const row of rows.slice(0, 20)) {
-      await verifyProduct(row.product);
-    }
-  }
+  const staleVisibleProducts = useMemo(
+    () =>
+      rows
+        .filter((row) => !isPriceEntryFresh(row.entry, DEFAULT_PRICE_CACHE_HOURS))
+        .slice(0, 20)
+        .map((row) => row.product),
+    [rows]
+  );
+
+  const {
+    compareProgress,
+    compareStatus,
+    compareInStockPrices,
+    cancelCompareInStockPrices
+  } = useMarketPriceBatch(staleVisibleProducts);
 
   function approveProposedChanges(): void {
     const changes = Object.fromEntries(
@@ -179,6 +188,14 @@ export function PriceAdvisorPage(): JSX.Element {
 
     if (Object.keys(changes).length === 0) {
       window.alert("Brak proponowanych zmian do zatwierdzenia.");
+      return;
+    }
+
+    if (
+      !window.confirm(
+        `Zatwierdzić sugerowane ceny dla ${Object.keys(changes).length} produktów? Możesz je później edytować ręcznie.`
+      )
+    ) {
       return;
     }
 
@@ -284,9 +301,11 @@ export function PriceAdvisorPage(): JSX.Element {
   const okCount = rows.filter((row) => row.status === "ok" || row.status === "low").length;
   const proposedChangeCount = rows.filter((row) => row.status === "too-high" && row.suggestedPrice < row.product.cena).length;
   const availableCount = LEGACY_PRODUCTS.filter((product) => (stock[product.ean] ?? 0) > 0).length;
+  const detailRow = detailEan ? rows.find((row) => row.product.ean === detailEan) ?? null : null;
 
   return (
-    <div className="price-advisor">
+    <div className={`price-advisor${embedded ? " price-advisor--embedded" : ""}`}>
+      {!embedded ? (
       <section className="price-advisor-header">
         <div>
           <span className="panel-label">Porownywarka cen</span>
@@ -308,6 +327,7 @@ export function PriceAdvisorPage(): JSX.Element {
           </div>
         </div>
       </section>
+      ) : null}
 
       <section className="panel price-advisor-tools">
         <div className="search-input-wrap">
@@ -354,14 +374,33 @@ export function PriceAdvisorPage(): JSX.Element {
         </label>
 
         <div className="price-actions-group price-actions-group--primary">
-          <button className="btn-search" type="button" onClick={() => void verifyVisible()}>
-            Zweryfikuj widoczne
+          <button
+            className="btn-search"
+            type="button"
+            disabled={compareProgress !== null || staleVisibleProducts.length === 0}
+            onClick={() => void compareInStockPrices()}
+          >
+            {compareProgress
+              ? `Sprawdzam… ${compareProgress.done}/${compareProgress.total}`
+              : "Sprawdź brakujące ceny"}
           </button>
 
+          {compareProgress ? (
+            <button className="btn-ghost" type="button" onClick={cancelCompareInStockPrices}>
+              Przerwij
+            </button>
+          ) : null}
+
           <button className="btn-search" type="button" onClick={approveProposedChanges} disabled={proposedChangeCount === 0}>
-            Zatwierdz proponowane
+            Zatwierdź sugerowane ceny
           </button>
         </div>
+
+        {compareStatus ? (
+          <div className={`inventory-status ${compareStatus.type}`} style={{ display: "block" }} role="status">
+            {compareStatus.message}
+          </div>
+        ) : null}
 
         <div className="price-actions-group">
           <button className="btn-ghost" type="button" onClick={exportJson}>
@@ -383,8 +422,47 @@ export function PriceAdvisorPage(): JSX.Element {
         </div>
       </section>
 
-      <section className="panel price-advisor-list">
-        {rows.map(({ product, entry, stockQty, marketPrice, priceTarget, suggestedPrice, difference, status }) => (
+      <section className={`panel price-advisor-list${embedded ? " price-advisor-list--compact" : ""}`}>
+        {embedded ? (
+          <div className="data-table-wrap">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Produkt</th>
+                  <th>EAN</th>
+                  <th>Nasza cena</th>
+                  <th>Status</th>
+                  <th>Cena online</th>
+                  <th aria-label="Akcje" />
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row) => (
+                  <tr key={row.product.ean}>
+                    <td className="data-table__sticky">{productTitle(row.product)}</td>
+                    <td className="mono">{row.product.ean}</td>
+                    <td>{formatMoney(row.product.cena)}</td>
+                    <td>
+                      <StatusPill
+                        variant={statusVariant(row.status)}
+                        hint={row.status === "missing" ? "Kliknij „Szczegóły”, aby wpisać lub sprawdzić cenę online." : undefined}
+                      >
+                        {priceStatusLabel(row.status)}
+                      </StatusPill>
+                    </td>
+                    <td>{row.entry.marketPrice || "—"}</td>
+                    <td>
+                      <button className="btn-ghost" type="button" onClick={() => setDetailEan(row.product.ean)}>
+                        Szczegóły
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+        rows.map(({ product, entry, stockQty, marketPrice, priceTarget, suggestedPrice, difference, status }) => (
           <article className={`price-row ${status}`} key={product.ean}>
             <div className="price-row-main">
               <div className="price-row-title">{productTitle(product)}</div>
@@ -396,46 +474,17 @@ export function PriceAdvisorPage(): JSX.Element {
             </div>
 
             <div className="price-row-actions">
-              <a href={searchUrl(product, "google")} target="_blank" rel="noreferrer" className="btn-ghost">
-                Google
-              </a>
-              <a href={searchUrl(product, "ceneo")} target="_blank" rel="noreferrer" className="btn-ghost">
-                Ceneo
-              </a>
-              <a href={searchUrl(product, "allegro")} target="_blank" rel="noreferrer" className="btn-ghost">
-                Allegro
-              </a>
+              <button className="btn-ghost" type="button" onClick={() => setDetailEan(product.ean)}>
+                Szczegóły
+              </button>
               <button
                 className="btn-search"
                 type="button"
-                onClick={() => void verifyProduct(product)}
+                onClick={() => void verifyProduct(product, { force: true })}
                 disabled={Boolean(verifying[product.ean])}
               >
                 {verifying[product.ean] ? "Sprawdzam..." : "Zweryfikuj"}
               </button>
-            </div>
-
-            <div className="price-row-inputs">
-              <label>
-                <span>Cena w internecie</span>
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  value={entry.marketPrice}
-                  onChange={(event) => updateEntry(product.ean, { marketPrice: event.target.value })}
-                  placeholder="np. 24,90"
-                />
-              </label>
-
-              <label>
-                <span>Zrodlo</span>
-                <input
-                  type="text"
-                  value={entry.source}
-                  onChange={(event) => updateEntry(product.ean, { source: event.target.value })}
-                  placeholder="sklep / link / notatka"
-                />
-              </label>
             </div>
 
             <div className="price-row-result">
@@ -456,8 +505,19 @@ export function PriceAdvisorPage(): JSX.Element {
               {entry.checkedAt ? <span className="price-check-note">Ostatnio: {entry.checkedAt}</span> : null}
             </div>
           </article>
-        ))}
+        ))
+        )}
       </section>
+
+      {detailRow ? (
+        <PriceDetailModal
+          row={detailRow}
+          verifying={Boolean(verifying[detailRow.product.ean])}
+          onClose={() => setDetailEan(null)}
+          onUpdateEntry={(patch) => updateEntry(detailRow.product.ean, patch)}
+          onVerify={(options) => void verifyProduct(detailRow.product, options)}
+        />
+      ) : null}
     </div>
   );
 }

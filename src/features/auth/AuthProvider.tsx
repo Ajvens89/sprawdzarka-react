@@ -7,6 +7,7 @@ import {
 } from "firebase/auth";
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { auth, isFirebaseConfigured } from "../../lib/firebase";
+import { allowedEmailSuffixHint, isEmailAllowedForApp } from "../../lib/authPolicy";
 
 type AuthContextValue = {
   isFirebaseEnabled: boolean;
@@ -30,7 +31,12 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
     }
 
     return onAuthStateChanged(auth, (nextUser) => {
-      setUser(nextUser);
+      if (nextUser && !isEmailAllowedForApp(nextUser.email)) {
+        void signOut(auth!);
+        setUser(null);
+      } else {
+        setUser(nextUser);
+      }
       setIsLoading(false);
     });
   }, []);
@@ -41,7 +47,15 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
     user,
     signIn: async (email, password) => {
       if (!auth) return;
-      await signInWithEmailAndPassword(auth, email, password);
+      const credential = await signInWithEmailAndPassword(auth, email, password);
+      if (!isEmailAllowedForApp(credential.user.email)) {
+        await signOut(auth);
+        const hint = allowedEmailSuffixHint();
+        throw Object.assign(new Error("Niedozwolony adres e-mail dla tej aplikacji."), {
+          code: "auth/unauthorized-email",
+          hint
+        });
+      }
     },
     resetPassword: async (email) => {
       if (!auth) return;
