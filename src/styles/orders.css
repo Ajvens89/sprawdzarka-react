@@ -17,6 +17,7 @@
   --ord-ready:      #22c55e;
   --ord-done:       #6b7280;
   --ord-danger:     #ef4444;
+  --ord-error-text: #fecaca;
   --ord-radius:     10px;
   --ord-font:       'Outfit', sans-serif;
 }
@@ -450,7 +451,7 @@
 
 .orders-sync-error-copy strong {
   display: block;
-  color: #fca5a5;
+  color: var(--ord-error-text);
   font-size: 0.82rem;
   letter-spacing: 0.04em;
   text-transform: uppercase;

@@ -492,3 +492,24 @@
   box-shadow: var(--shadow-card);
 }
 
+[data-theme="light"] .client-export-section-badge--deduction,
+:root:not([data-theme="dark"]) .client-export-section-badge--deduction {
+  color: var(--error);
+}
+
+[data-theme="light"] .client-export-section-badge--remaining,
+:root:not([data-theme="dark"]) .client-export-section-badge--remaining {
+  color: var(--success);
+}
+
+[data-theme="light"] .product-list::-webkit-scrollbar-thumb,
+[data-theme="light"] .inventory-list::-webkit-scrollbar-thumb,
+[data-theme="light"] .report-table-wrap::-webkit-scrollbar-thumb,
+[data-theme="light"] .bp-purchase-log::-webkit-scrollbar-thumb,
+:root:not([data-theme="dark"]) .product-list::-webkit-scrollbar-thumb,
+:root:not([data-theme="dark"]) .inventory-list::-webkit-scrollbar-thumb,
+:root:not([data-theme="dark"]) .report-table-wrap::-webkit-scrollbar-thumb,
+:root:not([data-theme="dark"]) .bp-purchase-log::-webkit-scrollbar-thumb {
+  background: rgba(15, 23, 42, 0.18);
+}
+
