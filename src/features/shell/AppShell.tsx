@@ -6,6 +6,7 @@ import { useAppStore } from "../../store/useAppStore";
 import { useAuth } from "../auth/AuthProvider";
 import { OrdersFirebaseGate } from "../orders/OrdersFirebaseGate";
 import { ScannerPage } from "../scanner/ScannerPage";
+import { RouteErrorBoundary } from "../../components/ui/RouteErrorBoundary";
 import { HelpPanel, ModuleNav } from "./ModuleNav";
 
 const BistroPage = lazy(() =>
@@ -60,7 +61,7 @@ function RouteFallback(): JSX.Element {
 }
 
 export function AppShell(): JSX.Element {
-  const { isFirebaseEnabled, user } = useAuth();
+  const { isFirebaseEnabled, user, authBlockReason } = useAuth();
   const saveStatus = useAppStore((state) => state.saveStatus);
   const saveLabel = useAppStore((state) => state.saveLabel);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -126,6 +127,13 @@ export function AppShell(): JSX.Element {
         </div>
       ) : null}
 
+      {isFirebaseEnabled && user && authBlockReason ? (
+        <div className="banner banner-warning app-local-banner" role="status">
+          {authBlockReason}{" "}
+          <Link to="/ustawienia">Ustawienia</Link>
+        </div>
+      ) : null}
+
       {mobileNavOpen ? (
         <button
           className="app-nav-overlay"
@@ -142,8 +150,9 @@ export function AppShell(): JSX.Element {
           <ModuleNav variant="sub" />
 
           <main className="app-main container bistro-wide">
-            <Suspense fallback={<RouteFallback />}>
-              <Routes>
+            <RouteErrorBoundary>
+              <Suspense fallback={<RouteFallback />}>
+                <Routes>
                 <Route path="/" element={<Navigate to="/sprzedaz/skanuj" replace />} />
 
                 <Route path="/sprzedaz/skanuj" element={<ScannerPage />} />
@@ -187,6 +196,7 @@ export function AppShell(): JSX.Element {
                 <Route path="*" element={<NotFoundPage />} />
               </Routes>
             </Suspense>
+            </RouteErrorBoundary>
           </main>
         </div>
       </div>

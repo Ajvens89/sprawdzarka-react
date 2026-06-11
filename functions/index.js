@@ -6,7 +6,9 @@ const ALLOWED_ORIGINS = [
   "https://sprawdzarkazf.web.app",
   "https://sprawdzarkazf.firebaseapp.com",
   "http://localhost",
-  "http://localhost:5173"
+  "http://localhost:5173",
+  "http://127.0.0.1:4173",
+  "http://localhost:4173"
 ];
 const RATE_LIMIT = 30;
 const RATE_WINDOW_MS = 60_000;

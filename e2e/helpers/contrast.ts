@@ -26,27 +26,7 @@ export function contrastRatio(foreground: Rgb, background: Rgb): number {
   return fg > bg ? fg / bg : bg / fg;
 }
 
-export async function assertInputContrast(page: Page, selector: string, minRatio = 4.5): Promise<void> {
-  const input = page.locator(selector).first();
-  await expect(input).toBeVisible();
-
-  const { backgroundColor, color } = await input.evaluate((element) => {
-    const styles = window.getComputedStyle(element);
-    return {
-      backgroundColor: styles.backgroundColor,
-      color: styles.color
-    };
-  });
-
-  const ratio = contrastRatio(parseRgb(color), parseRgb(backgroundColor));
-  expect(ratio, `${selector} contrast ${ratio.toFixed(2)} (bg: ${backgroundColor}, color: ${color})`).toBeGreaterThanOrEqual(
-    minRatio
-  );
-}
-
-export async function assertLocatorContrast(locator: Locator, minRatio = 4.5): Promise<void> {
-  await expect(locator).toBeVisible();
-
+async function readContrast(locator: Locator): Promise<{ ratio: number; backgroundColor: string; color: string }> {
   const { backgroundColor, color } = await locator.evaluate((element) => {
     const styles = window.getComputedStyle(element);
     return {
@@ -55,6 +35,41 @@ export async function assertLocatorContrast(locator: Locator, minRatio = 4.5): P
     };
   });
 
-  const ratio = contrastRatio(parseRgb(color), parseRgb(backgroundColor));
-  expect(ratio, `contrast ${ratio.toFixed(2)} (bg: ${backgroundColor}, color: ${color})`).toBeGreaterThanOrEqual(minRatio);
+  return {
+    ratio: contrastRatio(parseRgb(color), parseRgb(backgroundColor)),
+    backgroundColor,
+    color
+  };
+}
+
+export async function assertInputContrast(page: Page, selector: string, minRatio = 4.5): Promise<void> {
+  await assertAllInputsContrast(page, selector, minRatio);
+}
+
+export async function assertAllInputsContrast(
+  page: Page,
+  selector: string,
+  minRatio = 4.5
+): Promise<void> {
+  const inputs = page.locator(selector);
+  const count = await inputs.count();
+  expect(count, `Brak elementów dla selektora ${selector}`).toBeGreaterThan(0);
+
+  for (let index = 0; index < count; index += 1) {
+    const input = inputs.nth(index);
+    await expect(input).toBeVisible();
+    const { ratio, backgroundColor, color } = await readContrast(input);
+    expect(
+      ratio,
+      `${selector}[${index}] contrast ${ratio.toFixed(2)} (bg: ${backgroundColor}, color: ${color})`
+    ).toBeGreaterThanOrEqual(minRatio);
+  }
+}
+
+export async function assertLocatorContrast(locator: Locator, minRatio = 4.5): Promise<void> {
+  await expect(locator).toBeVisible();
+  const { ratio, backgroundColor, color } = await readContrast(locator);
+  expect(ratio, `contrast ${ratio.toFixed(2)} (bg: ${backgroundColor}, color: ${color})`).toBeGreaterThanOrEqual(
+    minRatio
+  );
 }

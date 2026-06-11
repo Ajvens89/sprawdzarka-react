@@ -13,9 +13,12 @@ import { LoginScreen } from "../auth/LoginScreen";
 import { PageHeader } from "../../components/ui/PageHeader";
 
 export function SettingsPage(): JSX.Element {
-  const { isFirebaseEnabled, logout, user } = useAuth();
+  const { authBlockReason, isFirebaseEnabled, logout, resendVerificationEmail, user } = useAuth();
   const [showLogin, setShowLogin] = useState(false);
   const [theme, setTheme] = useState<AppTheme>(() => getStoredTheme());
+  const [verificationNotice, setVerificationNotice] = useState("");
+  const [verificationError, setVerificationError] = useState("");
+  const [isSendingVerification, setIsSendingVerification] = useState(false);
 
   const saveStatus = useAppStore((state) => state.saveStatus);
   const saveLabel = useAppStore((state) => state.saveLabel);
@@ -113,7 +116,49 @@ export function SettingsPage(): JSX.Element {
           </div>
         ) : null}
 
+        {isFirebaseEnabled && user && authBlockReason ? (
+          <div className="banner banner-warning settings-banner" role="status">
+            {authBlockReason}
+          </div>
+        ) : null}
+
+        {verificationNotice ? (
+          <div className="banner settings-banner" role="status" style={{ borderColor: "var(--success)" }}>
+            {verificationNotice}
+          </div>
+        ) : null}
+
+        {verificationError ? (
+          <div className="banner banner-warning settings-banner" role="alert">
+            {verificationError}
+          </div>
+        ) : null}
+
         <div className="settings-actions">
+          {isFirebaseEnabled && user && authBlockReason ? (
+            <button
+              className="btn-search"
+              type="button"
+              disabled={isSendingVerification}
+              onClick={() => {
+                setVerificationNotice("");
+                setVerificationError("");
+                setIsSendingVerification(true);
+                void resendVerificationEmail()
+                  .then(() => {
+                    setVerificationNotice("Wysłano ponownie link weryfikacyjny. Sprawdź skrzynkę e-mail.");
+                  })
+                  .catch(() => {
+                    setVerificationError("Nie udało się wysłać linku weryfikacyjnego. Spróbuj za chwilę.");
+                  })
+                  .finally(() => {
+                    setIsSendingVerification(false);
+                  });
+              }}
+            >
+              {isSendingVerification ? "Wysyłam link…" : "Wyślij ponownie link weryfikacyjny"}
+            </button>
+          ) : null}
           {isFirebaseEnabled && user ? (
             <button className="btn-ghost" type="button" onClick={() => void logout()}>
               Wyloguj ({user.email ?? "użytkownik"})

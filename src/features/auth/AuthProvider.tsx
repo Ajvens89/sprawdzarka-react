@@ -1,5 +1,6 @@
 import {
   onAuthStateChanged,
+  sendEmailVerification,
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signOut,
@@ -7,14 +8,23 @@ import {
 } from "firebase/auth";
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { auth, isFirebaseConfigured } from "../../lib/firebase";
-import { allowedEmailSuffixHint, isEmailAllowedForApp } from "../../lib/authPolicy";
+import {
+  allowedEmailSuffixHint,
+  canSyncWithFirebase,
+  getFirebaseAccessBlockReason,
+  isEmailAllowedForApp
+} from "../../lib/authPolicy";
 
 type AuthContextValue = {
   isFirebaseEnabled: boolean;
   isLoading: boolean;
   user: User | null;
+  /** Użytkownik gotowy do odczytu/zapisu RTDB (emailVerified + dozwolona domena). */
+  syncUser: User | null;
+  authBlockReason: string | null;
   signIn: (email: string, password: string) => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
+  resendVerificationEmail: () => Promise<void>;
   logout: () => Promise<void>;
 };
 
@@ -45,6 +55,8 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
     isFirebaseEnabled: isFirebaseConfigured,
     isLoading,
     user,
+    syncUser: canSyncWithFirebase(user) ? user : null,
+    authBlockReason: getFirebaseAccessBlockReason(user),
     signIn: async (email, password) => {
       if (!auth) return;
       const credential = await signInWithEmailAndPassword(auth, email, password);
@@ -60,6 +72,12 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
     resetPassword: async (email) => {
       if (!auth) return;
       await sendPasswordResetEmail(auth, email);
+    },
+    resendVerificationEmail: async () => {
+      if (!auth?.currentUser) {
+        throw Object.assign(new Error("Brak zalogowanego użytkownika."), { code: "auth/no-user" });
+      }
+      await sendEmailVerification(auth.currentUser);
     },
     logout: async () => {
       if (!auth) return;

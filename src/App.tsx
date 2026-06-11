@@ -5,9 +5,9 @@ import { useFirebaseSync } from "./hooks/useFirebaseSync";
 import { useLocalSaveFeedback } from "./hooks/useLocalSaveFeedback";
 
 function AppSyncEffects(): null {
-  const { isFirebaseEnabled, user } = useAuth();
+  const { isFirebaseEnabled, syncUser } = useAuth();
 
-  useFirebaseSync(Boolean(isFirebaseEnabled && user));
+  useFirebaseSync(Boolean(isFirebaseEnabled && syncUser));
   useLocalSaveFeedback();
 
   return null;

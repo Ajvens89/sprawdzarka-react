@@ -3,6 +3,8 @@ import { useAuth } from "./AuthProvider";
 
 const ERRORS: Record<string, string> = {
   "auth/unauthorized-email": "Ten adres e-mail nie ma dostępu do danych wydarzenia.",
+  "auth/email-not-verified":
+    "Konto jest zalogowane, ale adres e-mail nie został jeszcze potwierdzony. Sprawdź skrzynkę lub wyślij link ponownie w Ustawieniach.",
   "auth/user-not-found": "Nie znaleziono użytkownika.",
   "auth/user-disabled": "To konto jest zablokowane w Firebase.",
   "auth/wrong-password": "Błędne hasło.",

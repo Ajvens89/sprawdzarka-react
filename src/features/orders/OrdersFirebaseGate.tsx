@@ -1,10 +1,11 @@
 import { type ReactNode } from "react";
 import { Link } from "react-router-dom";
+import { canSyncWithFirebase } from "../../lib/authPolicy";
 import { database, isFirebaseConfigured } from "../../lib/firebase";
 import { useAuth } from "../auth/AuthProvider";
 
 export function OrdersFirebaseGate({ children }: { children: ReactNode }): JSX.Element {
-  const { isFirebaseEnabled, isLoading, user } = useAuth();
+  const { isFirebaseEnabled, isLoading, user, authBlockReason } = useAuth();
 
   if (isLoading) {
     return (
@@ -17,14 +18,30 @@ export function OrdersFirebaseGate({ children }: { children: ReactNode }): JSX.E
     );
   }
 
-  if (!isFirebaseConfigured || !isFirebaseEnabled || !database || !user || user.uid === "local-user") {
+  if (
+    !isFirebaseConfigured ||
+    !isFirebaseEnabled ||
+    !database ||
+    !user ||
+    !canSyncWithFirebase(user)
+  ) {
     return (
       <div className="orders-page orders-page--blocked">
         <div className="orders-blocked-panel">
           <h1>Kasa wymaga Firebase</h1>
           <p>
-            Moduł zamówień działa tylko po zalogowaniu i synchronizacji z chmurą. Skonfiguruj plik{" "}
-            <code>.env</code>, zaloguj się w <Link to="/ustawienia">Ustawieniach</Link> i wróć tutaj.
+            {authBlockReason ??
+              "Moduł zamówień działa tylko po zalogowaniu i synchronizacji z chmurą. Skonfiguruj plik "}
+            {!authBlockReason ? (
+              <>
+                <code>.env</code>, zaloguj się w <Link to="/ustawienia">Ustawieniach</Link> i wróć tutaj.
+              </>
+            ) : (
+              <>
+                {" "}
+                Przejdź do <Link to="/ustawienia">Ustawień</Link>.
+              </>
+            )}
           </p>
           <Link className="btn-search orders-blocked-link" to="/ustawienia">
             Otwórz Ustawienia
