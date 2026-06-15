@@ -1,6 +1,13 @@
 import type { User } from "firebase/auth";
 
-/** Opcjonalny suffix e-maila (np. @zatekfantastyki.pl) — ustaw w VITE_FIREBASE_ALLOWED_EMAIL_SUFFIX */
+/** Kontakt do ręcznego zatwierdzania kont wolontariuszy. */
+export const ACCOUNT_APPROVAL_EMAIL = "fundacja@zakatekfantastyki.pl";
+
+export function accountApprovalRequestMessage(): string {
+  return `Wyślij prośbę o zatwierdzenie konta na ${ACCOUNT_APPROVAL_EMAIL}, aby korzystać z synchronizacji i cen online.`;
+}
+
+/** Opcjonalny suffix e-maila (np. @zf.pl) — ustaw w VITE_FIREBASE_ALLOWED_EMAIL_SUFFIX */
 export function isEmailAllowedForApp(email: string | null | undefined): boolean {
   const suffix = import.meta.env.VITE_FIREBASE_ALLOWED_EMAIL_SUFFIX?.trim();
   if (!suffix) return true;
@@ -30,14 +37,11 @@ export function getFirebaseAccessBlockReason(user: User | null | undefined): str
   if (!user || isLocalUser(user)) return null;
 
   if (!isEmailAllowedForApp(user.email)) {
-    const hint = allowedEmailSuffixHint();
-    return hint
-      ? `Ten adres e-mail nie ma dostępu do synchronizacji. Dozwolone konta: ${hint}`
-      : "Ten adres e-mail nie ma dostępu do synchronizacji.";
+    return accountApprovalRequestMessage();
   }
 
   if (!user.emailVerified) {
-    return "Potwierdź adres e-mail (link w wiadomości od Firebase), aby synchronizować dane wydarzenia.";
+    return `Potwierdź adres e-mail (link w wiadomości od Firebase). ${accountApprovalRequestMessage()}`;
   }
 
   return null;

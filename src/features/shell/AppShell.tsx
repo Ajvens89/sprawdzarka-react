@@ -1,6 +1,7 @@
 import { lazy, Suspense, useState } from "react";
 import { Link, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { EVENT_DATE, EVENT_NAME } from "../../data/meta";
+import { accountApprovalRequestMessage } from "../../lib/authPolicy";
 import { LEGACY_ROUTE_REDIRECTS } from "../../navigation/modules";
 import { useAppStore } from "../../store/useAppStore";
 import { useAuth } from "../auth/AuthProvider";
@@ -128,7 +129,7 @@ export function AppShell(): JSX.Element {
       {isFirebaseEnabled && !user ? (
         <div className="banner banner-warning app-local-banner" role="status">
           Tryb lokalny — dane tylko w tej przeglądarce.{" "}
-          <Link to="/ustawienia">Zaloguj w Ustawieniach</Link>, aby synchronizować.
+          <Link to="/ustawienia">Zaloguj w Ustawieniach</Link>, aby synchronizować. {accountApprovalRequestMessage()}
         </div>
       ) : null}
 

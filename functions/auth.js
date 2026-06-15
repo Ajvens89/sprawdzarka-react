@@ -5,6 +5,12 @@ if (getApps().length === 0) {
   initializeApp();
 }
 
+const ACCOUNT_APPROVAL_EMAIL = "fundacja@zakatekfantastyki.pl";
+
+function accountApprovalRequestMessage() {
+  return `Wyślij prośbę o zatwierdzenie konta na ${ACCOUNT_APPROVAL_EMAIL}, aby korzystać z synchronizacji i cen online.`;
+}
+
 function normalizeSuffix(raw) {
   const suffix = String(raw ?? "").trim();
   if (!suffix) return "";
@@ -32,7 +38,7 @@ export async function verifyPriceCheckAuth(req) {
         ok: false,
         price: null,
         source: "",
-        message: "Zaloguj się, aby sprawdzić cenę online."
+        message: `Zaloguj się, aby sprawdzić cenę online. ${accountApprovalRequestMessage()}`
       }
     };
   }
@@ -48,7 +54,7 @@ export async function verifyPriceCheckAuth(req) {
           ok: false,
           price: null,
           source: "",
-          message: "Potwierdź adres e-mail, aby sprawdzić cenę online."
+          message: `Potwierdź adres e-mail, aby sprawdzić cenę online. ${accountApprovalRequestMessage()}`
         }
       };
     }
@@ -61,7 +67,7 @@ export async function verifyPriceCheckAuth(req) {
           ok: false,
           price: null,
           source: "",
-          message: "To konto nie ma dostępu do sprawdzania cen online."
+          message: accountApprovalRequestMessage()
         }
       };
     }

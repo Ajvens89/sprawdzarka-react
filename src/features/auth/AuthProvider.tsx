@@ -9,7 +9,7 @@ import {
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { auth, isFirebaseConfigured } from "../../lib/firebase";
 import {
-  allowedEmailSuffixHint,
+  accountApprovalRequestMessage,
   canSyncWithFirebase,
   getFirebaseAccessBlockReason,
   isEmailAllowedForApp
@@ -62,10 +62,8 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
       const credential = await signInWithEmailAndPassword(auth, email, password);
       if (!isEmailAllowedForApp(credential.user.email)) {
         await signOut(auth);
-        const hint = allowedEmailSuffixHint();
-        throw Object.assign(new Error("Niedozwolony adres e-mail dla tej aplikacji."), {
-          code: "auth/unauthorized-email",
-          hint
+        throw Object.assign(new Error(accountApprovalRequestMessage()), {
+          code: "auth/unauthorized-email"
         });
       }
     },

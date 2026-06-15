@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { EVENT_DATE, EVENT_NAME } from "../../data/meta";
+import { accountApprovalRequestMessage } from "../../lib/authPolicy";
 import { usePwaInstall } from "../../hooks/usePwaInstall";
 import { xlsxDownload } from "../../lib/export";
 import { bistroCalcProduct } from "../../lib/bistro";
@@ -114,7 +115,8 @@ export function SettingsPage(): JSX.Element {
 
         {isFirebaseEnabled && !user ? (
           <div className="banner banner-warning settings-banner">
-            Tryb lokalny — dane zapisują się tylko w tej przeglądarce. Zaloguj się, aby synchronizować koszty i stany.
+            Tryb lokalny — dane zapisują się tylko w tej przeglądarce. Zaloguj się, aby synchronizować koszty i stany.{" "}
+            {accountApprovalRequestMessage()}
           </div>
         ) : null}
 

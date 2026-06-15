@@ -1,4 +1,5 @@
 import { auth } from "./firebase";
+import { accountApprovalRequestMessage } from "./authPolicy";
 
 export type PriceCheckResponse = {
   ok: boolean;
@@ -38,9 +39,9 @@ function fallbackMessage(status: number, payload: PriceCheckResponse): string {
 
   switch (status) {
     case 401:
-      return "Zaloguj się w Ustawieniach, aby sprawdzić cenę online.";
+      return `Zaloguj się w Ustawieniach, aby sprawdzić cenę online. ${accountApprovalRequestMessage()}`;
     case 403:
-      return "To konto nie ma dostępu do sprawdzania cen online.";
+      return accountApprovalRequestMessage();
     case 429:
       return "Za dużo zapytań. Spróbuj za chwilę.";
     default:

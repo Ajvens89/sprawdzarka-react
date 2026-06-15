@@ -68,7 +68,7 @@ describe("getFirebaseAccessBlockReason", () => {
     vi.unstubAllEnvs();
   });
 
-  it("zwraca komunikat o weryfikacji e-maila", () => {
+  it("zwraca komunikat o weryfikacji e-maila i zatwierdzeniu konta", () => {
     expect(
       getFirebaseAccessBlockReason({
         uid: "abc",
@@ -76,5 +76,23 @@ describe("getFirebaseAccessBlockReason", () => {
         emailVerified: false
       } as never)
     ).toMatch(/Potwierdź adres e-mail/i);
+    expect(
+      getFirebaseAccessBlockReason({
+        uid: "abc",
+        email: "volunteer@zf.pl",
+        emailVerified: false
+      } as never)
+    ).toMatch(/fundacja@zakatekfantastyki\.pl/i);
+  });
+
+  it("zwraca prośbę o zatwierdzenie konta dla niedozwolonej domeny", () => {
+    vi.stubEnv("VITE_FIREBASE_ALLOWED_EMAIL_SUFFIX", "@zf.pl");
+    expect(
+      getFirebaseAccessBlockReason({
+        uid: "abc",
+        email: "volunteer@gmail.com",
+        emailVerified: true
+      } as never)
+    ).toMatch(/fundacja@zakatekfantastyki\.pl/i);
   });
 });

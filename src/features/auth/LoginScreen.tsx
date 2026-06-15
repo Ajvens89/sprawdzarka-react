@@ -1,8 +1,9 @@
 import { useState } from "react";
+import { accountApprovalRequestMessage } from "../../lib/authPolicy";
 import { useAuth } from "./AuthProvider";
 
 const ERRORS: Record<string, string> = {
-  "auth/unauthorized-email": "Ten adres e-mail nie ma dostępu do danych wydarzenia.",
+  "auth/unauthorized-email": accountApprovalRequestMessage(),
   "auth/email-not-verified":
     "Konto jest zalogowane, ale adres e-mail nie został jeszcze potwierdzony. Sprawdź skrzynkę lub wyślij link ponownie w Ustawieniach.",
   "auth/user-not-found": "Nie znaleziono użytkownika.",
@@ -57,11 +58,7 @@ export function LoginScreen({
       await signIn(email.trim(), password);
       onSuccess?.();
     } catch (err) {
-      const hint =
-        typeof err === "object" && err && "hint" in err && (err as { hint?: string }).hint
-          ? ` Dozwolone konta: ${(err as { hint: string }).hint}`
-          : "";
-      setError(getAuthErrorMessage(err, "Nie udało się zalogować.") + hint);
+      setError(getAuthErrorMessage(err, "Nie udało się zalogować."));
     } finally {
       setIsSubmitting(false);
     }
@@ -110,7 +107,9 @@ export function LoginScreen({
         <h2 className="login-title">
           Zaloguj się do <span>Sprawdzarki</span>
         </h2>
-        <p className="login-subtitle">Firebase Auth — dostęp do danych wydarzenia</p>
+        <p className="login-subtitle">
+          Firebase Auth — dostęp do synchronizacji i cen online po zatwierdzeniu konta.
+        </p>
 
         <div className="login-fields">
           <div className="login-field">
