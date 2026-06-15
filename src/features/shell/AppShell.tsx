@@ -1,5 +1,5 @@
 import { lazy, Suspense, useState } from "react";
-import { Link, Navigate, Route, Routes } from "react-router-dom";
+import { Link, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { EVENT_DATE, EVENT_NAME } from "../../data/meta";
 import { LEGACY_ROUTE_REDIRECTS } from "../../navigation/modules";
 import { useAppStore } from "../../store/useAppStore";
@@ -33,6 +33,9 @@ const PricingImportPage = lazy(() =>
 const InventoryPage = lazy(() =>
   import("../scanner/InventoryPage").then((module) => ({ default: module.InventoryPage }))
 );
+const MobileScannerPage = lazy(() =>
+  import("../scanner/MobileScannerPage").then((module) => ({ default: module.MobileScannerPage }))
+);
 const ProductsPage = lazy(() =>
   import("../scanner/ProductsPage").then((module) => ({ default: module.ProductsPage }))
 );
@@ -61,6 +64,8 @@ function RouteFallback(): JSX.Element {
 }
 
 export function AppShell(): JSX.Element {
+  const location = useLocation();
+  const isMobileScanner = location.pathname === "/sprzedaz/skanuj/aparat";
   const { isFirebaseEnabled, user, authBlockReason } = useAuth();
   const saveStatus = useAppStore((state) => state.saveStatus);
   const saveLabel = useAppStore((state) => state.saveLabel);
@@ -72,7 +77,7 @@ export function AppShell(): JSX.Element {
   }
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell${isMobileScanner ? " app-shell--mobile-scanner" : ""}`}>
       <header className="app-topbar">
         <div className="app-topbar__left">
           <button
@@ -147,15 +152,16 @@ export function AppShell(): JSX.Element {
         <ModuleNav variant="sidebar" mobileOpen={mobileNavOpen} onNavigate={closeMobileNav} />
 
         <div className="app-content">
-          <ModuleNav variant="sub" />
+          {!isMobileScanner ? <ModuleNav variant="sub" /> : null}
 
-          <main className="app-main container bistro-wide">
+          <main className={`app-main container${isMobileScanner ? " app-main--flush" : " bistro-wide"}`}>
             <RouteErrorBoundary>
               <Suspense fallback={<RouteFallback />}>
                 <Routes>
                 <Route path="/" element={<Navigate to="/sprzedaz/skanuj" replace />} />
 
                 <Route path="/sprzedaz/skanuj" element={<ScannerPage />} />
+                <Route path="/sprzedaz/skanuj/aparat" element={<MobileScannerPage />} />
                 <Route path="/sprzedaz/inwentaryzacja" element={<InventoryPage />} />
                 <Route path="/sprzedaz/produkty" element={<ProductsPage />} />
 
@@ -201,7 +207,7 @@ export function AppShell(): JSX.Element {
         </div>
       </div>
 
-      <ModuleNav variant="bottom" />
+      {!isMobileScanner ? <ModuleNav variant="bottom" /> : null}
 
       {helpOpen ? <HelpPanel onClose={() => setHelpOpen(false)} /> : null}
     </div>

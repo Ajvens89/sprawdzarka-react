@@ -1,19 +1,20 @@
 {
   "rules": {
     "sprawdzarka_v1": {
-      ".read": "auth != null && auth.token.email_verified === true",
-      ".write": "auth != null && auth.token.email_verified === true"
+      ".read": "auth != null && auth.token.email_verified === true && auth.token.email.matches(/@zf\\.pl$/i)",
+      ".write": "auth != null && auth.token.email_verified === true && auth.token.email.matches(/@zf\\.pl$/i)",
+      ".validate": "newData.hasChildren(['stock','prices','costs','inventory','bistro','updatedAt']) && newData.child('updatedAt').isNumber() && newData.child('updatedAt').val() <= now + 300000"
     },
     "orders_live": {
-      ".read": "auth != null && auth.token.email_verified === true",
-      ".write": "auth != null && auth.token.email_verified === true",
+      ".read": "auth != null && auth.token.email_verified === true && auth.token.email.matches(/@zf\\.pl$/i)",
+      ".write": "auth != null && auth.token.email_verified === true && auth.token.email.matches(/@zf\\.pl$/i)",
       "_meta": {
-        ".read": "auth != null && auth.token.email_verified === true",
-        ".write": "auth != null && auth.token.email_verified === true"
+        ".read": "auth != null && auth.token.email_verified === true && auth.token.email.matches(/@zf\\.pl$/i)",
+        ".write": "auth != null && auth.token.email_verified === true && auth.token.email.matches(/@zf\\.pl$/i)"
       },
       "$orderId": {
-        ".read": "auth != null && auth.token.email_verified === true",
-        ".write": "auth != null && auth.token.email_verified === true"
+        ".read": "auth != null && auth.token.email_verified === true && auth.token.email.matches(/@zf\\.pl$/i)",
+        ".write": "auth != null && auth.token.email_verified === true && auth.token.email.matches(/@zf\\.pl$/i)"
       }
     }
   }

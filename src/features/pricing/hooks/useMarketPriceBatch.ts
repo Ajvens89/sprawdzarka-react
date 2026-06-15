@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { DEFAULT_PRICE_CACHE_HOURS, isPriceEntryFresh } from "../../../lib/priceCheckCache";
-import { fetchOnlinePrice } from "../../../lib/priceCheck";
+import { fetchOnlinePrice, PriceCheckError } from "../../../lib/priceCheck";
 import { sleep } from "../../../lib/marketPriceCompare";
 import { useAppStore } from "../../../store/useAppStore";
 import type { Product } from "../../../types/app";
@@ -97,13 +97,17 @@ export function useMarketPriceBatch(inStockProducts: Product[]) {
             checkedAt: new Date().toLocaleString("pl-PL"),
             status: result.message
           });
-        } catch {
+        } catch (error) {
           errors += 1;
+          const message =
+            error instanceof PriceCheckError
+              ? error.payload.message
+              : "Błąd połączenia ze sprawdzaniem cen online.";
           setPriceEntry(product.ean, {
             marketPrice: previousEntry?.marketPrice ?? "",
             source: previousEntry?.source ?? "",
             checkedAt: new Date().toLocaleString("pl-PL"),
-            status: "Błąd połączenia ze sprawdzaniem cen online."
+            status: message
           });
         }
 

@@ -5,7 +5,7 @@ import { xlsxDownload } from "../../lib/export";
 import { formatMoney, normalizeText } from "../../lib/utils";
 import { useAppStore } from "../../store/useAppStore";
 import type { PriceEntry } from "../../types/app";
-import { fetchOnlinePrice } from "../../lib/priceCheck";
+import { fetchOnlinePrice, PriceCheckError } from "../../lib/priceCheck";
 import { DEFAULT_PRICE_CACHE_HOURS, isPriceEntryFresh } from "../../lib/priceCheckCache";
 import { PriceDetailModal } from "../pricing/components/PriceDetailModal";
 import { useMarketPriceBatch } from "../pricing/hooks/useMarketPriceBatch";
@@ -120,10 +120,13 @@ export function PriceAdvisorPage({ embedded = false }: { embedded?: boolean }): 
         checkedAt: new Date().toLocaleString("pl-PL"),
         status: result.message
       });
-    } catch {
+    } catch (error) {
       updateEntry(product.ean, {
         checkedAt: new Date().toLocaleString("pl-PL"),
-        status: "Blad polaczenia z lokalnym sprawdzaniem cen."
+        status:
+          error instanceof PriceCheckError
+            ? error.payload.message
+            : "Blad polaczenia z lokalnym sprawdzaniem cen."
       });
     } finally {
       setVerifying((state) => ({ ...state, [product.ean]: false }));

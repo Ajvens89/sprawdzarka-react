@@ -27,6 +27,7 @@ export const APP_MODULES: AppModule[] = [
     basePath: "/sprzedaz",
     links: [
       { to: "/sprzedaz/skanuj", label: "Skanuj grę", icon: "🔍", section: "Gry" },
+      { to: "/sprzedaz/skanuj/aparat", label: "Skaner aparatu", icon: "📷" },
       { to: "/sprzedaz/produkty", label: "Lista produktów", icon: "📋" },
       { to: "/sprzedaz/inwentaryzacja", label: "Inwentaryzacja", icon: "📦" },
       { to: "/sprzedaz/bistro", label: "Bistro", icon: "🍿", section: "Bistro" },

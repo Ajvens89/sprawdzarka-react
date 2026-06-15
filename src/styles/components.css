@@ -256,6 +256,169 @@
   }
 }
 
+.scanner-page__camera-cta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+}
+
+.scanner-page__camera-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.ean-camera-scanner {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.ean-camera-scanner__viewport {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  max-height: min(52vh, 420px);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: #0f172a;
+  border: 1px solid var(--border);
+}
+
+.ean-camera-scanner__video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.ean-camera-scanner__reticle {
+  position: absolute;
+  inset: 18% 10%;
+  border: 2px solid rgba(255, 255, 255, 0.85);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 0 0 9999px rgba(15, 23, 42, 0.35);
+  pointer-events: none;
+}
+
+.ean-camera-scanner__overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  text-align: center;
+  background: rgba(15, 23, 42, 0.72);
+  color: #fff;
+  font-size: 0.9rem;
+}
+
+.ean-camera-scanner__overlay--error {
+  background: rgba(127, 29, 29, 0.82);
+}
+
+.ean-camera-scanner__hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.mobile-scanner-page {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.mobile-scanner-page__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0 0.25rem;
+}
+
+.mobile-scanner-page__title {
+  margin: 0.15rem 0 0;
+  font-size: 1.35rem;
+}
+
+.mobile-scanner-page__back {
+  flex-shrink: 0;
+  margin-top: 0.35rem;
+}
+
+.mobile-scanner-page__unsupported {
+  margin: 0;
+}
+
+.mobile-scanner-page__result {
+  margin: 0;
+}
+
+.mobile-scanner-page__next {
+  width: 100%;
+  margin-top: 0.75rem;
+}
+
+.mobile-scanner-page__manual summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.mobile-scanner-page__recent {
+  margin: 0;
+}
+
+.mobile-scanner-page__install {
+  padding: 0 0.25rem;
+}
+
+.mobile-scanner-page__install-btn {
+  width: 100%;
+}
+
+.mobile-scanner-page__install-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.mobile-scanner-page__install-hint--success {
+  color: var(--success);
+}
+
+.mobile-scanner-page__pause {
+  align-self: center;
+  margin-bottom: 0.5rem;
+}
+
+.app-shell--mobile-scanner .module-nav--sub,
+.app-shell--mobile-scanner .module-nav--bottom {
+  display: none;
+}
+
+.app-shell--mobile-scanner .app-layout {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.app-shell--mobile-scanner .module-nav--sidebar {
+  display: none;
+}
+
+.app-shell--mobile-scanner .app-topbar__menu-btn {
+  display: none;
+}
+
+.app-main--flush {
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+  padding-bottom: 1rem;
+}
+
 /* UI kit — status pills, tables, modal body */
 .status-pill {
   display: inline-flex;

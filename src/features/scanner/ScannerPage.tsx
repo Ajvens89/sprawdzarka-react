@@ -1,86 +1,27 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { LEGACY_PRODUCTS, getResolvedProducts, getResolvedStock } from "../../lib/scanner";
-import { normalizeEAN } from "../../lib/utils";
+import { isCameraScannerSupported } from "../../components/scanner/EanCameraScanner";
+import { useEanLookup } from "../../hooks/useEanLookup";
+import { getResolvedStock } from "../../lib/scanner";
 import { useAppStore } from "../../store/useAppStore";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { ResultCard } from "./ResultCard";
 
-type ResultState =
-  | { type: "idle" }
-  | { type: "found"; product: (typeof LEGACY_PRODUCTS)[number] }
-  | { type: "error"; title: string; message: string };
-
-type RecentScan = {
-  ean: string;
-  title: string;
-  at: number;
-};
-
-const MAX_RECENT = 5;
-
-function productTitle(product: (typeof LEGACY_PRODUCTS)[number]): string {
-  return product.tytuł;
-}
-
 export function ScannerPage(): JSX.Element {
   const stockOverrides = useAppStore((state) => state.stockOverrides);
-  const priceOverrides = useAppStore((state) => state.priceOverrides);
   const stock = useMemo(() => getResolvedStock(stockOverrides), [stockOverrides]);
-  const products = useMemo(() => getResolvedProducts(priceOverrides), [priceOverrides]);
+  const { result, recentScans, lookup } = useEanLookup({ emptyAsError: true, maxRecent: 5 });
 
   const [eanInput, setEanInput] = useState("");
-  const [result, setResult] = useState<ResultState>({ type: "idle" });
-  const [recentScans, setRecentScans] = useState<RecentScan[]>([]);
-
-  useEffect(() => {
-    if (result.type !== "found") return;
-
-    const refreshedProduct = products.find((item) => item.ean === result.product.ean);
-    if (refreshedProduct && refreshedProduct.cena !== result.product.cena) {
-      setResult({ type: "found", product: refreshedProduct });
-    }
-  }, [products, result]);
 
   function checkEAN(value?: string): void {
-    const query = normalizeEAN(value ?? eanInput);
-
-    if (!query) {
-      setResult({
-        type: "error",
-        title: "✗ Brak kodu",
-        message: "Wpisz 13-cyfrowy kod EAN."
-      });
-      return;
-    }
-
-    if (!/^\d{13}$/.test(query)) {
-      setResult({
-        type: "error",
-        title: "✗ Nieprawidłowy kod",
-        message: "Wpisz poprawny 13-cyfrowy kod EAN."
-      });
-      return;
-    }
-
-    const product = products.find((item) => item.ean === query);
-
-    if (!product) {
-      setResult({
-        type: "error",
-        title: "✗ Nie znaleziono",
-        message: `Kod EAN ${query} nie istnieje w bazie produktów z targów.`
-      });
+    const lookupResult = lookup(value ?? eanInput);
+    if (lookupResult.type === "not_found") {
       setEanInput("");
-      return;
     }
-
-    setResult({ type: "found", product });
-    setRecentScans((current) => {
-      const next = [{ ean: product.ean, title: productTitle(product), at: Date.now() }, ...current.filter((item) => item.ean !== product.ean)];
-      return next.slice(0, MAX_RECENT);
-    });
-    setEanInput("");
+    if (lookupResult.type === "found") {
+      setEanInput("");
+    }
   }
 
   return (
@@ -90,6 +31,17 @@ export function ScannerPage(): JSX.Element {
         title="Skanuj grę"
         description="Zeskanuj lub wpisz EAN planszówki — zobaczysz cenę, stan i szybkie akcje."
       />
+
+      {isCameraScannerSupported() ? (
+        <div className="scanner-page__camera-cta">
+          <Link className="btn-search" to="/sprzedaz/skanuj/aparat">
+            Skaner aparatu (PWA)
+          </Link>
+          <p className="scanner-page__camera-hint">
+            Zainstaluj na telefonie dla szybszego skanowania kodów EAN.
+          </p>
+        </div>
+      ) : null}
 
       <div className="scanner-page__layout">
         <section className="panel panel-scan scanner-page__main">
@@ -103,7 +55,7 @@ export function ScannerPage(): JSX.Element {
               inputMode="numeric"
               enterKeyHint="search"
               value={eanInput}
-              onChange={(event) => setEanInput(normalizeEAN(event.target.value))}
+              onChange={(event) => setEanInput(event.target.value.replace(/\D/g, "").slice(0, 13))}
               onKeyDown={(event) => {
                 if (event.key === "Enter") checkEAN();
                 if (event.key === "Escape") setEanInput("");
@@ -145,6 +97,11 @@ export function ScannerPage(): JSX.Element {
             <Link className="btn-ghost" to="/sprzedaz/inwentaryzacja">
               Inwentaryzacja
             </Link>
+            {isCameraScannerSupported() ? (
+              <Link className="btn-ghost" to="/sprzedaz/skanuj/aparat">
+                Skaner aparatu
+              </Link>
+            ) : null}
           </section>
         </aside>
       </div>

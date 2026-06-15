@@ -9,7 +9,7 @@ import type {
   StockMap,
   StockState
 } from "../types/app";
-import { formatPrice, hasOwn, normalizeText } from "./utils";
+import { formatPrice, hasOwn, normalizeEAN, normalizeText } from "./utils";
 
 export function getResolvedStock(stockOverrides: StockMap): StockMap {
   return {
@@ -192,3 +192,34 @@ export function uniqueProducts(products: Product[]): Product[] {
 }
 
 export const LEGACY_PRODUCTS = uniqueProducts(BASE_PRODUCTS);
+
+export type EanLookupResult =
+  | { type: "empty" }
+  | { type: "invalid" }
+  | { type: "not_found"; ean: string }
+  | { type: "found"; product: Product };
+
+export function isValidEan13(ean: string): boolean {
+  if (!/^\d{13}$/.test(ean)) return false;
+
+  let sum = 0;
+  for (let index = 0; index < 12; index += 1) {
+    const digit = Number(ean[index]);
+    sum += index % 2 === 0 ? digit : digit * 3;
+  }
+
+  const checkDigit = (10 - (sum % 10)) % 10;
+  return checkDigit === Number(ean[12]);
+}
+
+export function lookupEanInCatalog(raw: string, products: Product[]): EanLookupResult {
+  const query = normalizeEAN(raw);
+
+  if (!query) return { type: "empty" };
+  if (!/^\d{13}$/.test(query) || !isValidEan13(query)) return { type: "invalid" };
+
+  const product = products.find((item) => item.ean === query);
+  if (!product) return { type: "not_found", ean: query };
+
+  return { type: "found", product };
+}

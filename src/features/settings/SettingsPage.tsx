@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { EVENT_DATE, EVENT_NAME } from "../../data/meta";
+import { usePwaInstall } from "../../hooks/usePwaInstall";
 import { xlsxDownload } from "../../lib/export";
 import { bistroCalcProduct } from "../../lib/bistro";
 import { applyTheme, getStoredTheme, type AppTheme } from "../../lib/theme";
@@ -28,6 +29,7 @@ export function SettingsPage(): JSX.Element {
   const resetInventory = useAppStore((state) => state.resetInventory);
   const resetBistro = useAppStore((state) => state.resetBistro);
   const bistroProducts = useAppStore((state) => state.bistroProducts);
+  const { canInstall, install, isStandalone } = usePwaInstall();
 
   function exportBistroXlsx(): void {
     const rows: Array<Array<string | number>> = [
@@ -170,6 +172,35 @@ export function SettingsPage(): JSX.Element {
             </button>
           ) : null}
         </div>
+      </section>
+
+      <section className="panel settings-section">
+        <h2 className="settings-section__title">Aplikacja mobilna (PWA)</h2>
+        <p className="settings-section__text">
+          Zainstaluj skaner na telefonie — uruchamia się od razu w widoku aparatu i działa offline po pierwszym
+          wczytaniu.
+        </p>
+        {isStandalone ? (
+          <div className="banner settings-banner" style={{ borderColor: "var(--success)" }}>
+            Aplikacja jest zainstalowana na tym urządzeniu.
+          </div>
+        ) : null}
+        <div className="settings-actions">
+          {canInstall ? (
+            <button className="btn-search" type="button" onClick={() => void install()}>
+              Zainstaluj skaner na telefonie
+            </button>
+          ) : null}
+          <Link className="btn-ghost" to="/sprzedaz/skanuj/aparat">
+            Otwórz skaner aparatu
+          </Link>
+        </div>
+        {!isStandalone && !canInstall ? (
+          <p className="settings-section__text settings-muted">
+            Na iPhone: Safari → Udostępnij → „Dodaj do ekranu początkowego”. Na Androidzie: Chrome → menu →
+            „Zainstaluj aplikację”.
+          </p>
+        ) : null}
       </section>
 
       <section className="panel settings-section">

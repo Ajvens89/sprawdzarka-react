@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { BASE_STOCK } from "../../data/stock";
 import type { Product, StockMap } from "../../types/app";
-import { fetchOnlinePrice } from "../../lib/priceCheck";
+import { fetchOnlinePrice, PriceCheckError } from "../../lib/priceCheck";
 import { getStockState, renderFoundPrice } from "../../lib/scanner";
 import { formatMoney } from "../../lib/utils";
 import { useAppStore } from "../../store/useAppStore";
@@ -26,7 +26,6 @@ export function ResultCard({
   result: ResultState;
   stock: StockMap;
 }): JSX.Element | null {
-  const stockOverrides = useAppStore((state) => state.stockOverrides);
   const setStockOverride = useAppStore((state) => state.setStockOverride);
   const replaceStockOverrides = useAppStore((state) => state.replaceStockOverrides);
   const setPriceEntry = useAppStore((state) => state.setPriceEntry);
@@ -35,9 +34,14 @@ export function ResultCard({
   const [priceCheckMessage, setPriceCheckMessage] = useState<string | null>(null);
   const [marketPrice, setMarketPrice] = useState<number | null>(null);
   const [marketSource, setMarketSource] = useState("");
+  const priceCheckGenerationRef = useRef(0);
   const foundEan = result.type === "found" ? result.product.ean : null;
+  const hasOverride = useAppStore((state) =>
+    foundEan ? Object.prototype.hasOwnProperty.call(state.stockOverrides, foundEan) : false
+  );
 
   useEffect(() => {
+    priceCheckGenerationRef.current += 1;
     setMarketPrice(null);
     setMarketSource("");
     setPriceCheckMessage(null);
@@ -59,7 +63,6 @@ export function ResultCard({
   const stockState = getStockState(result.product.ean, stock);
   const product = result.product;
   const baseline = BASE_STOCK[product.ean];
-  const hasOverride = Object.prototype.hasOwnProperty.call(stockOverrides, product.ean);
   const resolvedQty = stock[product.ean];
 
   function handleApplyStock(): void {
@@ -71,6 +74,7 @@ export function ResultCard({
 
   function handleClearOverride(): void {
     if (!hasOverride) return;
+    const stockOverrides = useAppStore.getState().stockOverrides;
     const next = { ...stockOverrides };
     delete next[product.ean];
     replaceStockOverrides(next);
@@ -78,33 +82,43 @@ export function ResultCard({
   }
 
   async function handleCheckOnlinePrice(): Promise<void> {
+    const generation = ++priceCheckGenerationRef.current;
+    const { ean, tytuł, cena } = product;
+
     setIsCheckingPrice(true);
     setPriceCheckMessage(null);
 
     try {
-      const record = product as unknown as Record<string, unknown>;
-      const title = String(Object.entries(record).find(([key]) => key !== "ean" && key !== "cena")?.[1] ?? "");
-      const result = await fetchOnlinePrice({
-        ean: product.ean,
-        title,
-        currentPrice: product.cena,
+      const priceResult = await fetchOnlinePrice({
+        ean,
+        title: tytuł,
+        currentPrice: cena,
         force: true
       });
 
-      setMarketPrice(result.price);
-      setMarketSource(result.source);
-      setPriceCheckMessage(result.message);
+      if (generation !== priceCheckGenerationRef.current) return;
 
-      setPriceEntry(product.ean, {
-        marketPrice: result.price ? result.price.toFixed(2).replace(".", ",") : "",
-        source: result.source,
+      setMarketPrice(priceResult.price);
+      setMarketSource(priceResult.source);
+      setPriceCheckMessage(priceResult.message);
+
+      setPriceEntry(ean, {
+        marketPrice: priceResult.price ? priceResult.price.toFixed(2).replace(".", ",") : "",
+        source: priceResult.source,
         checkedAt: new Date().toLocaleString("pl-PL"),
-        status: result.message
+        status: priceResult.message
       });
-    } catch {
+    } catch (error) {
+      if (generation !== priceCheckGenerationRef.current) return;
+      if (error instanceof PriceCheckError) {
+        setPriceCheckMessage(error.payload.message);
+        return;
+      }
       setPriceCheckMessage("Błąd połączenia ze sprawdzaniem cen online.");
     } finally {
-      setIsCheckingPrice(false);
+      if (generation === priceCheckGenerationRef.current) {
+        setIsCheckingPrice(false);
+      }
     }
   }
 

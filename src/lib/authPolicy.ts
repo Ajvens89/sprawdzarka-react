@@ -19,7 +19,7 @@ export function isLocalUser(user: User | null | undefined): boolean {
   return Boolean(user && user.uid === "local-user");
 }
 
-/** Zgodne z regułami RTDB: zweryfikowany e-mail + opcjonalny suffix domeny. */
+/** Wymaga zweryfikowanego e-maila + opcjonalnego suffixu (musi być zgodny z regułami RTDB). */
 export function canSyncWithFirebase(user: User | null | undefined): boolean {
   if (!user || isLocalUser(user)) return false;
   if (!user.emailVerified) return false;

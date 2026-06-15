@@ -1,4 +1,5 @@
 import { onRequest } from "firebase-functions/v2/https";
+import { verifyPriceCheckAuth } from "./auth.js";
 import { handleInfaktAction } from "./infakt.js";
 import { checkOnlinePrice, getCachedPriceCheck, setCachedPriceCheck } from "./priceCheckLogic.js";
 
@@ -51,6 +52,14 @@ function checkRateLimit(ip) {
   return bucket.count <= RATE_LIMIT;
 }
 
+function applyCors(req, res) {
+  const corsOrigin = resolveCorsOrigin(req);
+  res.setHeader("Access-Control-Allow-Origin", corsOrigin);
+  res.setHeader("Vary", "Origin");
+  res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+}
+
 export const priceCheck = onRequest(
   {
     region: "europe-west1",
@@ -58,11 +67,7 @@ export const priceCheck = onRequest(
     secrets: ["SERPAPI_KEY", "SERPER_API_KEY"]
   },
   async (req, res) => {
-    const corsOrigin = resolveCorsOrigin(req);
-    res.setHeader("Access-Control-Allow-Origin", corsOrigin);
-    res.setHeader("Vary", "Origin");
-    res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+    applyCors(req, res);
 
     if (req.method === "OPTIONS") {
       res.status(204).send("");
@@ -89,6 +94,12 @@ export const priceCheck = onRequest(
       return;
     }
 
+    const authResult = await verifyPriceCheckAuth(req);
+    if (!authResult.ok) {
+      res.status(authResult.status).json(authResult.payload);
+      return;
+    }
+
     const ean = String(req.query.ean ?? "").replace(/\D/g, "").slice(0, 13);
     const title = String(req.query.title ?? "");
     const currentPrice = Number(req.query.currentPrice ?? 0);
@@ -112,11 +123,21 @@ export const priceCheck = onRequest(
       }
     }
 
-    const result = await checkOnlinePrice(ean, title, Number.isFinite(currentPrice) ? currentPrice : 0);
-    if (result.price) {
-      setCachedPriceCheck(ean, result);
+    try {
+      const result = await checkOnlinePrice(ean, title, Number.isFinite(currentPrice) ? currentPrice : 0);
+      if (result.price) {
+        setCachedPriceCheck(ean, result);
+      }
+      res.json(result);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Nie udało się sprawdzić ceny online.";
+      res.status(502).json({
+        ok: false,
+        price: null,
+        source: "",
+        message
+      });
     }
-    res.json(result);
   }
 );
 
@@ -127,11 +148,7 @@ export const infaktProxy = onRequest(
     secrets: ["INFAKT_API_KEY"]
   },
   async (req, res) => {
-    const corsOrigin = resolveCorsOrigin(req);
-    res.setHeader("Access-Control-Allow-Origin", corsOrigin);
-    res.setHeader("Vary", "Origin");
-    res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+    applyCors(req, res);
 
     if (req.method === "OPTIONS") {
       res.status(204).send("");
